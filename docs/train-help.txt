@@ -1,0 +1,89 @@
+usage: train.py [-h] --outdir DIR [--gpus INT] [--snap INT] [--seed INT] [-n]
+                --data PATH [--res INT] [--mirror BOOL] [--metrics LIST]
+                [--metricdata PATH]
+                [--cfg {auto,stylegan2,paper256,paper512,paper1024,cifar,cifarbaseline}]
+                [--gamma FLOAT] [--kimg INT] [--aug {noaug,ada,fixed,adarv}]
+                [--p FLOAT] [--target TARGET]
+                [--augpipe {blit,geom,color,filter,noise,cutout,bg,bgc,bgcf,bgcfn,bgcfnc}]
+                [--cmethod {nocmethod,bcr,zcr,pagan,wgangp,auxrot,spectralnorm,shallowmap,adropout}]
+                [--dcap FLOAT] [--resume RESUME] [--freezed INT]
+
+Train a GAN using the techniques described in the paper
+"Training Generative Adversarial Networks with Limited Data".
+
+optional arguments:
+  -h, --help            show this help message and exit
+
+general options:
+  --outdir DIR          Where to save the results (required)
+  --gpus INT            Number of GPUs to use (default: 1 gpu)
+  --snap INT            Snapshot interval (default: 50 ticks)
+  --seed INT            Random seed (default: 1000)
+  -n, --dry-run         Print training options and exit
+
+training dataset:
+  --data PATH           Training dataset path (required)
+  --res INT             Dataset resolution (default: highest available)
+  --mirror BOOL         Augment dataset with x-flips (default: false)
+
+metrics:
+  --metrics LIST        Comma-separated list or "none" (default: fid50k_full)
+  --metricdata PATH     Dataset to evaluate metrics against (optional)
+
+base config:
+  --cfg {auto,stylegan2,paper256,paper512,paper1024,cifar,cifarbaseline}
+                        Base config (default: auto)
+  --gamma FLOAT         Override R1 gamma
+  --kimg INT            Override training duration
+
+discriminator augmentation:
+  --aug {noaug,ada,fixed,adarv}
+                        Augmentation mode (default: ada)
+  --p FLOAT             Specify augmentation probability for --aug=fixed
+  --target TARGET       Override ADA target for --aug=ada and --aug=adarv
+  --augpipe {blit,geom,color,filter,noise,cutout,bg,bgc,bgcf,bgcfn,bgcfnc}
+                        Augmentation pipeline (default: bgc)
+
+comparison methods:
+  --cmethod {nocmethod,bcr,zcr,pagan,wgangp,auxrot,spectralnorm,shallowmap,adropout}
+                        Comparison method (default: nocmethod)
+  --dcap FLOAT          Multiplier for discriminator capacity
+
+transfer learning:
+  --resume RESUME       Resume from network pickle (default: noresume)
+  --freezed INT         Freeze-D (default: 0 discriminator layers)
+
+examples:
+
+  # Train custom dataset using 1 GPU.
+  python train.py --outdir=~/training-runs --gpus=1 --data=~/datasets/custom
+
+  # Train class-conditional CIFAR-10 using 2 GPUs.
+  python train.py --outdir=~/training-runs --gpus=2 --data=~/datasets/cifar10c \
+      --cfg=cifar
+
+  # Transfer learn MetFaces from FFHQ using 4 GPUs.
+  python train.py --outdir=~/training-runs --gpus=4 --data=~/datasets/metfaces \
+      --cfg=paper1024 --mirror=1 --resume=ffhq1024 --snap=10
+
+  # Reproduce original StyleGAN2 config F.
+  python train.py --outdir=~/training-runs --gpus=8 --data=~/datasets/ffhq \
+      --cfg=stylegan2 --res=1024 --mirror=1 --aug=noaug
+
+available base configs (--cfg):
+  auto           Automatically select reasonable defaults based on resolution
+                 and GPU count. Good starting point for new datasets.
+  stylegan2      Reproduce results for StyleGAN2 config F at 1024x1024.
+  paper256       Reproduce results for FFHQ and LSUN Cat at 256x256.
+  paper512       Reproduce results for BreCaHAD and AFHQ at 512x512.
+  paper1024      Reproduce results for MetFaces at 1024x1024.
+  cifar          Reproduce results for CIFAR-10 (tuned configuration).
+  cifarbaseline  Reproduce results for CIFAR-10 (baseline configuration).
+
+transfer learning source networks (--resume):
+  ffhq256        FFHQ trained at 256x256 resolution.
+  ffhq512        FFHQ trained at 512x512 resolution.
+  ffhq1024       FFHQ trained at 1024x1024 resolution.
+  celebahq256    CelebA-HQ trained at 256x256 resolution.
+  lsundog256     LSUN Dog trained at 256x256 resolution.
+  <path or URL>  Custom network pickle.
