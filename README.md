@@ -17,7 +17,7 @@ This repository supersedes the original [StyleGAN2](https://github.com/NVlabs/st
 
 * **ADA**: Significantly better results for datasets with less than ~30k training images. State-of-the-art results for CIFAR-10.
 * **Mixed-precision support**: ~1.6x faster training, ~1.3x faster inference, ~1.5x lower GPU memory consumption.
-* **Automatic hyperparameter selection**: Reasonable out-of-the-box results for any dataset resolution and GPU count.
+* **Better hyperparameter defaults**: Reasonable out-of-the-box results for different dataset resolutions and GPU counts.
 * **Clean codebase**: Extensive refactoring and simplification. The code should be generally easier to work with.
 * **Command line tools**: Easily reproduce training runs from the paper, generate projection videos for arbitrary images, etc.
 * **Network import**: Full support for network pickles produced by [StyleGAN](https://github.com/NVlabs/stylegan) and [StyleGAN2](https://github.com/NVlabs/stylegan2). Faster loading times.
