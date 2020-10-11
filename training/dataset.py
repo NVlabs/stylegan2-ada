@@ -26,6 +26,7 @@ class TFRecordDataset:
         max_images      = None,     # Maximum number of images to use, None = use all images.
         max_validation  = 10000,    # Maximum size of the validation set, None = use all available images.
         mirror_augment  = False,    # Apply mirror augment?
+        mirror_augment_v= False,    # Apply mirror augment vertically?
         repeat          = True,     # Repeat dataset indefinitely?
         shuffle         = True,     # Shuffle images?
         shuffle_mb      = 4096,     # Shuffle data within specified window (megabytes), 0 = disable shuffling.
@@ -44,6 +45,7 @@ class TFRecordDataset:
         self.label_dtype        = None
         self.has_validation_set = None
         self.mirror_augment     = mirror_augment
+        self.mirror_augment_v   = mirror_augment_v
         self.repeat             = repeat
         self.shuffle            = shuffle
         self._max_validation    = max_validation
@@ -148,9 +150,12 @@ class TFRecordDataset:
     # Get next minibatch as TensorFlow expressions.
     def get_minibatch_tf(self):
         images, labels = self._tf_iterator.get_next()
-        if self.mirror_augment:
+        if self.mirror_augment or self.mirror_augment_v:
             images = tf.cast(images, tf.float32)
-            images = tf.where(tf.random_uniform([tf.shape(images)[0]]) < 0.5, images, tf.reverse(images, [3]))
+            if self.mirror_augment:
+                images = tf.where(tf.random_uniform([tf.shape(images)[0]]) < 0.5, images, tf.reverse(images, [3]))
+            if self.mirror_augment_v:
+                images = tf.where(tf.random_uniform([tf.shape(images)[0]]) < 0.5, images, tf.reverse(images, [2]))
             images = tf.cast(images, self.dtype)
         return images, labels
 
@@ -222,12 +227,12 @@ class TFRecordDataset:
 #----------------------------------------------------------------------------
 # Construct a dataset object using the given options.
 
-def load_dataset(path=None, resolution=None, max_images=None, max_label_size=0, mirror_augment=False, repeat=True, shuffle=True, seed=None):
+def load_dataset(path=None, resolution=None, max_images=None, max_label_size=0, mirror_augment=False, mirror_augment_v=False, repeat=True, shuffle=True, seed=None):
     _ = seed
     assert os.path.isdir(path)
     return TFRecordDataset(
         tfrecord_dir=path,
         resolution=resolution, max_images=max_images, max_label_size=max_label_size,
-        mirror_augment=mirror_augment, repeat=repeat, shuffle=shuffle)
+        mirror_augment=mirror_augment, mirror_augment_v=mirror_augment_v, repeat=repeat, shuffle=shuffle)
 
 #----------------------------------------------------------------------------

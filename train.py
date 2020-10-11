@@ -37,6 +37,7 @@ def setup_training_options(
     data       = None, # Training dataset (required): <path>
     res        = None, # Override dataset resolution: <int>, default = highest available
     mirror     = None, # Augment dataset with x-flips: <bool>, default = False
+    mirrory    = None, # Augment dataset with y-flips: <bool>, default = False
 
     # Metrics (not included in desc).
     metrics    = None, # List of metric names: [], ['fid50k_full'] (default), ...
@@ -89,9 +90,9 @@ def setup_training_options(
     args.image_snapshot_ticks = snap
     args.network_snapshot_ticks = snap
 
-    # -----------------------------------
-    # Training dataset: data, res, mirror
-    # -----------------------------------
+    # ---------------------------------------------
+    # Training dataset: data, res, mirror, mirrory
+    # ---------------------------------------------
 
     assert data is not None
     assert isinstance(data, str)
@@ -122,11 +123,17 @@ def setup_training_options(
 
     if mirror is None:
         mirror = False
-    else:
-        assert isinstance(mirror, bool)
-        if mirror:
-            desc += '-mirror'
+    assert isinstance(mirror, bool)
+    if mirror:
+        desc += '-mirror'
     args.train_dataset_args.mirror_augment = mirror
+
+    if mirrory is None:
+        mirrory = False
+    assert isinstance(mirrory, bool)
+    if mirrory:
+        desc += '-mirrory'
+    args.train_dataset_args.mirror_augment_v = mirrory
 
     # ----------------------------
     # Metrics: metrics, metricdata
@@ -161,6 +168,9 @@ def setup_training_options(
 
     cfg_specs = {
         'auto':          dict(ref_gpus=-1, kimg=25000,  mb=-1, mbstd=-1, fmaps=-1,  lrate=-1,     gamma=-1,   ema=-1,  ramp=0.05, map=2), # populated dynamically based on 'gpus' and 'res'
+        '11gb-gpu':     dict(ref_gpus=1,  kimg=25000,  mb=4, mbstd=4,  fmaps=1,   lrate=0.002,  gamma=10,   ema=10,  ramp=None, map=8), # uses mixed-precision, 11GB GPU
+        '24gb-gpu':     dict(ref_gpus=1,  kimg=25000,  mb=8, mbstd=8,  fmaps=1,   lrate=0.002,  gamma=10,   ema=10,  ramp=None, map=8), # uses mixed-precision, 24GB GPU
+        '48gb-gpu':     dict(ref_gpus=1,  kimg=25000,  mb=16, mbstd=16,  fmaps=1,   lrate=0.002,  gamma=10,   ema=10,  ramp=None, map=8), # uses mixed-precision, 48GB GPU
         'stylegan2':     dict(ref_gpus=8,  kimg=25000,  mb=32, mbstd=4,  fmaps=1,   lrate=0.002,  gamma=10,   ema=10,  ramp=None, map=8), # uses mixed-precision, unlike original StyleGAN2
         'paper256':      dict(ref_gpus=8,  kimg=25000,  mb=64, mbstd=8,  fmaps=0.5, lrate=0.0025, gamma=1,    ema=20,  ramp=None, map=8),
         'paper512':      dict(ref_gpus=8,  kimg=25000,  mb=64, mbstd=8,  fmaps=1,   lrate=0.0025, gamma=0.5,  ema=20,  ramp=None, map=8),
@@ -524,13 +534,14 @@ def main():
     group.add_argument('--data',   help='Training dataset path (required)', metavar='PATH', required=True)
     group.add_argument('--res',    help='Dataset resolution (default: highest available)', type=int, metavar='INT')
     group.add_argument('--mirror', help='Augment dataset with x-flips (default: false)', type=_str_to_bool, metavar='BOOL')
+    group.add_argument('--mirrory', help='Augment dataset with y-flips (default: false)', type=_str_to_bool, metavar='BOOL')
 
     group = parser.add_argument_group('metrics')
     group.add_argument('--metrics',    help='Comma-separated list or "none" (default: fid50k_full)', type=_parse_comma_sep, metavar='LIST')
     group.add_argument('--metricdata', help='Dataset to evaluate metrics against (optional)', metavar='PATH')
 
     group = parser.add_argument_group('base config')
-    group.add_argument('--cfg',   help='Base config (default: auto)', choices=['auto', 'stylegan2', 'paper256', 'paper512', 'paper1024', 'cifar', 'cifarbaseline'])
+    group.add_argument('--cfg',   help='Base config (default: auto)', choices=['auto', '11gb-gpu', '24gb-gpu', '48gb-gpu', 'stylegan2', 'paper256', 'paper512', 'paper1024', 'cifar', 'cifarbaseline'])
     group.add_argument('--gamma', help='Override R1 gamma', type=float, metavar='FLOAT')
     group.add_argument('--kimg',  help='Override training duration', type=int, metavar='INT')
 
