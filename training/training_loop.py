@@ -133,10 +133,10 @@ def training_loop(
 
     print('Exporting sample images...')
     grid_size, grid_reals, grid_labels = setup_snapshot_image_grid(training_set)
-    save_image_grid(grid_reals, os.path.join(run_dir, 'reals.png'), drange=[0,255], grid_size=grid_size)
+    save_image_grid(grid_reals, os.path.join(run_dir, 'reals.jpg'), drange=[0,255], grid_size=grid_size)
     grid_latents = np.random.randn(np.prod(grid_size), *G.input_shape[1:])
     grid_fakes = Gs.run(grid_latents, grid_labels, is_validation=True, minibatch_size=minibatch_gpu)
-    save_image_grid(grid_fakes, os.path.join(run_dir, 'fakes_init.png'), drange=[-1,1], grid_size=grid_size)
+    save_image_grid(grid_fakes, os.path.join(run_dir, 'fakes_init.jpg'), drange=[-1,1], grid_size=grid_size)
 
     print(f'Replicating networks across {num_gpus} GPUs...')
     G_gpus = [G]
@@ -301,7 +301,7 @@ def training_loop(
             # Save snapshots.
             if image_snapshot_ticks is not None and (done or cur_tick % image_snapshot_ticks == 0):
                 grid_fakes = Gs.run(grid_latents, grid_labels, is_validation=True, minibatch_size=minibatch_gpu)
-                save_image_grid(grid_fakes, os.path.join(run_dir, f'fakes{cur_nimg // 1000:06d}.png'), drange=[-1,1], grid_size=grid_size)
+                save_image_grid(grid_fakes, os.path.join(run_dir, f'fakes{cur_nimg // 1000:06d}.jpg'), drange=[-1,1], grid_size=grid_size)
             if network_snapshot_ticks is not None and (done or cur_tick % network_snapshot_ticks == 0):
                 pkl = os.path.join(run_dir, f'network-snapshot-{cur_nimg // 1000:06d}.pkl')
                 with open(pkl, 'wb') as f:
