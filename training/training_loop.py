@@ -19,6 +19,7 @@ import dnnlib.tflib as tflib
 from dnnlib.tflib.autosummary import autosummary
 
 from training import dataset
+from training import misc
 
 #----------------------------------------------------------------------------
 # Select size and contents of the image snapshot grids that are exported
@@ -121,6 +122,11 @@ def training_loop(
         G = tflib.Network('G', num_channels=training_set.shape[0], resolution=training_set.shape[1], label_size=training_set.label_size, **G_args)
         D = tflib.Network('D', num_channels=training_set.shape[0], resolution=training_set.shape[1], label_size=training_set.label_size, **D_args)
         Gs = G.clone('Gs')
+
+        if resume_pkl == 'latest':
+            out_dir = misc.get_parent_dir(run_dir)
+            resume_pkl = misc.locate_latest_pkl(out_dir)
+
         if resume_pkl is not None:
             print(f'Resuming from "{resume_pkl}"')
             with dnnlib.util.open_url(resume_pkl) as f:
