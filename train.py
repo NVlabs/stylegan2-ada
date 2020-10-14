@@ -46,6 +46,7 @@ def setup_training_options(
     cfg        = None, # Base config: 'auto' (default), 'stylegan2', 'paper256', 'paper512', 'paper1024', 'cifar', 'cifarbaseline'
     gamma      = None, # Override R1 gamma: <float>, default = depends on cfg
     kimg       = None, # Override training duration: <int>, default = depends on cfg
+    cfg_map    = None, # Override config map: <int>, default = depends on cfg
 
     # Discriminator augmentation.
     aug        = None, # Augmentation mode: 'ada' (default), 'noaug', 'fixed', 'adarv'
@@ -214,6 +215,12 @@ def setup_training_options(
             raise UserError('--kimg must be at least 1')
         desc += f'-kimg{kimg:d}'
         args.total_kimg = kimg
+
+    if cfg_map is not None:
+        assert isinstance(cfg_map, int)
+        if not cfg_map >= 1:
+            raise UserError('--cfg_map must be at least 1')
+        args.G_args.mapping_layers = cfg_map
 
     # ---------------------------------------------------
     # Discriminator augmentation: aug, p, target, augpipe
@@ -534,6 +541,7 @@ def main():
     group.add_argument('--cfg',   help='Base config (default: auto)', choices=['auto', 'auto_no_ramp', 'stylegan2', 'paper256', 'paper512', 'paper1024', 'cifar', 'cifarbaseline'])
     group.add_argument('--gamma', help='Override R1 gamma', type=float, metavar='FLOAT')
     group.add_argument('--kimg',  help='Override training duration', type=int, metavar='INT')
+    group.add_argument('--cfg_map',  help='Override config map', type=int, metavar='INT')
 
     group = parser.add_argument_group('discriminator augmentation')
     group.add_argument('--aug',    help='Augmentation mode (default: ada)', choices=['noaug', 'ada', 'fixed', 'adarv'])
