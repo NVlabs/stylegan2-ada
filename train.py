@@ -391,6 +391,12 @@ def setup_training_options(
         'ffhq1024':     'https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/transfer-learning-source-nets/ffhq-res1024-mirror-stylegan2-noaug.pkl',
         'celebahq256':  'https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/transfer-learning-source-nets/celebahq-res256-mirror-paper256-kimg100000-ada-target0.5.pkl',
         'lsundog256':   'https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/transfer-learning-source-nets/lsundog-res256-paper256-kimg100000-noaug.pkl',
+        'afhqcat512':      'https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/afhqcat.pkl',
+        'afhqdog512':      'https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/afhqdog.pkl',
+        'afhqwild512':     'https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/afhqwild.pkl',
+        'brecahad512':     'https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/brecahad.pkl',
+        'cifar10':      'https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/cifar10.pkl',
+        'metfaces':     'https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/metfaces.pkl',
     }
 
     assert resume is None or isinstance(resume, str)
@@ -511,6 +517,12 @@ transfer learning source networks (--resume):
   ffhq1024       FFHQ trained at 1024x1024 resolution.
   celebahq256    CelebA-HQ trained at 256x256 resolution.
   lsundog256     LSUN Dog trained at 256x256 resolution.
+  afhqcat512     AFHQ Cat trained at 512x512 resolution.
+  afhqdog512     AFHQ Dog trained at 512x512 resolution.
+  afhqwild512    AFHQ Wild trained at 512x512 resolution.
+  brecahad512    BreCaHAD trained at 512x512 resolution.
+  cifar10        CIFAR10 trained at 32x32 resolution.
+  metfaces512    MetFaces trained at 512x512 resolution.
   <path or URL>  Custom network pickle.
 '''
 
