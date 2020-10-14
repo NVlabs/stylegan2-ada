@@ -288,10 +288,6 @@ _examples = '''examples:
   # Render image from projected latent vector
   python %(prog)s --outdir=out --dlatents=out/dlatents.npz \\
       --network=https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/ffhq.pkl
-
-  # Generate 50-second-long uncurated 'ffhq' 5x3 interpolation video at 60fps, with truncation-psi=0.7
-  python %(prog)s lerp-video --network=https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/ffhq.pkl \\
-      --seeds=1000 --grid-w=5 --grid-h=3 --truncation-psi=0.7 --duration_sec=50 --fps=60
 '''
 
 #----------------------------------------------------------------------------
@@ -302,15 +298,6 @@ def main():
         epilog=_examples,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
-
-    # parser.add_argument('--network', help='Network pickle filename', dest='network_pkl', required=True)
-    # g = parser.add_mutually_exclusive_group(required=True)
-    # g.add_argument('--seeds', type=_parse_num_range, help='List of random seeds')
-    # g.add_argument('--dlatents', dest='dlatents_npz', help='Generate images for saved dlatents')
-    # parser.add_argument('--trunc', dest='truncation_psi', type=float, help='Truncation psi (default: %(default)s)', default=0.5)
-    # parser.add_argument('--class', dest='class_idx', type=int, help='Class label (default: unconditional)')
-    # parser.add_argument('--outdir', help='Where to save the output images', required=True, metavar='DIR')
-    # parser.add_argument('--create-grid', action='store_true', dest='grid', help='Add flag to save the generated images in a grid')
 
     subparsers = parser.add_subparsers(help='Sub-commands', dest='command')
 
