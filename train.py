@@ -169,7 +169,9 @@ def setup_training_options(
     cfg_specs = {
         'auto':          dict(ref_gpus=-1, kimg=25000,  mb=-1, mbstd=-1, fmaps=-1,  lrate=-1,     gamma=-1,   ema=-1,  ramp=0.05, map=2), # populated dynamically based on 'gpus' and 'res'
         '11gb-gpu':     dict(ref_gpus=1,  kimg=25000,  mb=4, mbstd=4,  fmaps=1,   lrate=0.002,  gamma=10,   ema=10,  ramp=None, map=8), # uses mixed-precision, 11GB GPU
+        '11gb-gpu-complex':     dict(ref_gpus=1,  kimg=25000,  mb=4, mbstd=4,  fmaps=1,   lrate=0.002,  gamma=10,   ema=10,  ramp=None, map=8), # uses mixed-precision, 11GB GPU
         '24gb-gpu':     dict(ref_gpus=1,  kimg=25000,  mb=8, mbstd=8,  fmaps=1,   lrate=0.002,  gamma=10,   ema=10,  ramp=None, map=8), # uses mixed-precision, 24GB GPU
+        '24gb-gpu-complex':     dict(ref_gpus=1,  kimg=25000,  mb=8, mbstd=8,  fmaps=1,   lrate=0.002,  gamma=10,   ema=10,  ramp=None, map=8), # uses mixed-precision, 24GB GPU
         '48gb-gpu':     dict(ref_gpus=1,  kimg=25000,  mb=16, mbstd=16,  fmaps=1,   lrate=0.002,  gamma=10,   ema=10,  ramp=None, map=8), # uses mixed-precision, 48GB GPU
         'stylegan2':     dict(ref_gpus=8,  kimg=25000,  mb=32, mbstd=4,  fmaps=1,   lrate=0.002,  gamma=10,   ema=10,  ramp=None, map=8), # uses mixed-precision, unlike original StyleGAN2
         'paper256':      dict(ref_gpus=8,  kimg=25000,  mb=64, mbstd=8,  fmaps=0.5, lrate=0.0025, gamma=1,    ema=20,  ramp=None, map=8),
@@ -205,7 +207,7 @@ def setup_training_options(
     args.G_args.num_fp16_res = args.D_args.num_fp16_res = 4 # enable mixed-precision training
     args.G_args.conv_clamp = args.D_args.conv_clamp = 256 # clamp activations to avoid float16 overflow
 
-    if cfg == 'cifar':
+    if cfg == 'cifar' or cfg.split('-')[-1] == 'complex':
         args.loss_args.pl_weight = 0 # disable path length regularization
         args.G_args.style_mixing_prob = None # disable style mixing
         args.D_args.architecture = 'orig' # disable residual skip connections
@@ -541,7 +543,7 @@ def main():
     group.add_argument('--metricdata', help='Dataset to evaluate metrics against (optional)', metavar='PATH')
 
     group = parser.add_argument_group('base config')
-    group.add_argument('--cfg',   help='Base config (default: auto)', choices=['auto', '11gb-gpu', '24gb-gpu', '48gb-gpu', 'stylegan2', 'paper256', 'paper512', 'paper1024', 'cifar', 'cifarbaseline'])
+    group.add_argument('--cfg',   help='Base config (default: auto)', choices=['auto', '11gb-gpu', '24gb-gpu','24gb-gpu-complex', '48gb-gpu', 'stylegan2', 'paper256', 'paper512', 'paper1024', 'cifar', 'cifarbaseline'])
     group.add_argument('--gamma', help='Override R1 gamma', type=float, metavar='FLOAT')
     group.add_argument('--kimg',  help='Override training duration', type=int, metavar='INT')
 
