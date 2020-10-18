@@ -91,7 +91,7 @@ def generate_from_generator_adaptive(psi,radius_large,radius_small,step1,step2,v
 
     return output_frames
 
-def fleshy(pkl,psi,radius_large,radius_small,step1,step2,video_length=1.0):
+def main(pkl,psi,radius_large,radius_small,step1,step2,video_length=1.0):
 
     tflib.init_tf()
     print('Loading networks from "%s"...' % pkl)
