@@ -690,7 +690,7 @@ def create_from_image_folders(tfrecord_dir, image_dir, shuffle, ignore_labels):
     for root, subdirs, files in os.walk(image_dir):
         for subdir in subdirs:
             folder_path = os.path.join(root, subdir)
-            print('Loading images from "%s" as label %d' % (folder_path, label_count))
+            print('\t Loading images from "%s" as label %d' % (folder_path, label_count))
             # print('\t contains %d files' % len(os.listdir(folder_path)))
 
             if(len(os.listdir(folder_path))):
