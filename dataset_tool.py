@@ -677,6 +677,39 @@ def create_from_images(tfrecord_dir, image_dir, shuffle):
             tfr.add_image(img)
             
 #----------------------------------------------------------------------------
+            
+def create_from_image_folders(tfrecord_dir, image_dir, shuffle):
+    imgs = []
+    labels = []
+    print('Loading images from "%s"' % image_dir)
+    
+    for root, subdirs, files in os.walk(image_dir):
+    
+    # image_filenames = sorted(glob.glob(os.path.join(image_dir, '*')))
+    # if len(image_filenames) == 0:
+        # error('No input images found')
+
+    img = np.asarray(PIL.Image.open(image_filenames[0]))
+    resolution = img.shape[0]
+    channels = img.shape[2] if img.ndim == 3 else 1
+    if img.shape[1] != resolution:
+        error('Input images must have the same width and height')
+    if resolution != 2 ** int(np.floor(np.log2(resolution))):
+        error('Input image resolution must be a power-of-two')
+    if channels not in [1, 3]:
+        error('Input images must be stored as RGB or grayscale')
+
+    with TFRecordExporter(tfrecord_dir, len(image_filenames)) as tfr:
+        order = tfr.choose_shuffled_order() if shuffle else np.arange(len(image_filenames))
+        for idx in range(order.size):
+            img = np.asarray(PIL.Image.open(image_filenames[order[idx]]))
+            if channels == 1:
+                img = img[np.newaxis, :, :] # HW => CHW
+            else:
+                img = img.transpose([2, 0, 1]) # HWC => CHW
+            tfr.add_image(img)
+            
+#----------------------------------------------------------------------------
 
 def create_from_images_with_labels(tfrecord_dir, image_dir, labels, shuffle):
     print('Loading images from "%s"' % image_dir)
@@ -976,6 +1009,12 @@ def execute_cmdline(argv):
     p.add_argument(     '--cy',             help='Center Y coordinate (default: 121)', type=int, default=121)
 
     p = add_command(    'create_from_images', 'Create dataset from a directory full of images.',
+                                            'create_from_images datasets/mydataset myimagedir')
+    p.add_argument(     'tfrecord_dir',     help='New dataset directory to be created')
+    p.add_argument(     'image_dir',        help='Directory containing the images')
+    p.add_argument(     '--shuffle',        help='Randomize image order (default: 1)', type=int, default=1)
+    
+    p = add_command(    'create_from_image_folders', 'Create dataset from a directory full of images. Use the folders to generate labels.',
                                             'create_from_images datasets/mydataset myimagedir')
     p.add_argument(     'tfrecord_dir',     help='New dataset directory to be created')
     p.add_argument(     'image_dir',        help='Directory containing the images')
