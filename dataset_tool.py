@@ -485,8 +485,10 @@ def create_cifar10(tfrecord_dir, cifar10_dir, ignore_labels):
             data = pickle.load(file, encoding='latin1')
         images.append(data['data'].reshape(-1, 3, 32, 32))
         labels.append(data['labels'])
+    
     images = np.concatenate(images)
     labels = np.concatenate(labels)
+    
     assert ignore_labels in [0, 1]
     assert images.shape == (50000, 3, 32, 32) and images.dtype == np.uint8
     assert labels.shape == (50000,) and labels.dtype in [np.int32, np.int64]
@@ -494,6 +496,7 @@ def create_cifar10(tfrecord_dir, cifar10_dir, ignore_labels):
     assert np.min(labels) == 0 and np.max(labels) == 9
     onehot = np.zeros((labels.size, np.max(labels) + 1), dtype=np.float32)
     onehot[np.arange(labels.size), labels] = 1.0
+    # print(onehot)
 
     with TFRecordExporter(tfrecord_dir, images.shape[0]) as tfr:
         order = tfr.choose_shuffled_order()
@@ -678,18 +681,33 @@ def create_from_images(tfrecord_dir, image_dir, shuffle):
             
 #----------------------------------------------------------------------------
             
-def create_from_image_folders(tfrecord_dir, image_dir, shuffle):
-    imgs = []
+def create_from_image_folders(tfrecord_dir, image_dir, shuffle, ignore_labels):
+    images = []
     labels = []
     print('Loading images from "%s"' % image_dir)
     
+    label_count = 0
     for root, subdirs, files in os.walk(image_dir):
-    
-    # image_filenames = sorted(glob.glob(os.path.join(image_dir, '*')))
-    # if len(image_filenames) == 0:
-        # error('No input images found')
+        for subdir in subdirs:
+            folder_path = os.path.join(root, subdir)
+            print('Loading images from "%s" as label %d' % (folder_path, label_count))
+            # print('\t contains %d files' % len(os.listdir(folder_path)))
 
-    img = np.asarray(PIL.Image.open(image_filenames[0]))
+            if(len(os.listdir(folder_path))):
+                for file in os.listdir(folder_path):
+                    images.append(os.path.join(folder_path,file))
+                    labels.append(label_count)
+                    # print(os.path.join(folder_path,file))
+            
+            label_count+=1
+
+    assert ignore_labels in [0, 1]
+    assert np.min(labels) == 0 and np.max(labels) == (label_count-1)
+    labels = np.array(labels)  
+    onehot = np.zeros((labels.size, np.max(labels) + 1), dtype=np.float32)
+    onehot[np.arange(labels.size), labels] = 1.0
+
+    img = np.asarray(PIL.Image.open(images[0]))
     resolution = img.shape[0]
     channels = img.shape[2] if img.ndim == 3 else 1
     if img.shape[1] != resolution:
@@ -699,15 +717,18 @@ def create_from_image_folders(tfrecord_dir, image_dir, shuffle):
     if channels not in [1, 3]:
         error('Input images must be stored as RGB or grayscale')
 
-    with TFRecordExporter(tfrecord_dir, len(image_filenames)) as tfr:
-        order = tfr.choose_shuffled_order() if shuffle else np.arange(len(image_filenames))
+    with TFRecordExporter(tfrecord_dir, len(images)) as tfr:
+        order = tfr.choose_shuffled_order() if shuffle else np.arange(len(images))
         for idx in range(order.size):
-            img = np.asarray(PIL.Image.open(image_filenames[order[idx]]))
+            img = np.asarray(PIL.Image.open(images[order[idx]]))
             if channels == 1:
                 img = img[np.newaxis, :, :] # HW => CHW
             else:
                 img = img.transpose([2, 0, 1]) # HWC => CHW
             tfr.add_image(img)
+
+        if not ignore_labels:
+            tfr.add_labels(onehot[order])
             
 #----------------------------------------------------------------------------
 
@@ -1019,7 +1040,8 @@ def execute_cmdline(argv):
     p.add_argument(     'tfrecord_dir',     help='New dataset directory to be created')
     p.add_argument(     'image_dir',        help='Directory containing the images')
     p.add_argument(     '--shuffle',        help='Randomize image order (default: 1)', type=int, default=1)
-    
+    p.add_argument(     '--ignore_labels',  help='Ignore labels (default: 0)', type=int, default=0)
+
     p = add_command(    'create_from_images_with_labels', 'Create dataset from a directory full of images and class labels.',
                                             'create_from_images datasets/mydataset myimagedir')
     p.add_argument(     'tfrecord_dir',     help='New dataset directory to be created')
