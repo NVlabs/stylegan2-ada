@@ -754,22 +754,6 @@ def create_from_images_raw(tfrecord_dir, image_dir, shuffle, resolution_log2=7, 
                     print ('error when adding', image_filenames[order[idx]])
                     continue
 
-    # with TFRecordExporter(tfrecord_dir, len(image_filenames)) as tfr:
-    #     order = (
-    #         tfr.choose_shuffled_order() if shuffle else np.arange(len(image_filenames))
-    #     )
-    #     tfr.create_tfr_writer(img.shape)
-    #     print("Adding the images to tfrecords ...")
-    #     for idx in range(order.size):
-    #         if idx % 1000 == 0:
-    #             print ("added images", idx)
-            # with tf.gfile.FastGFile(image_filenames[order[idx]], 'rb') as fid:
-            #     try:
-            #         tfr.add_image_raw(fid.read())
-            #     except:
-            #         print ('error when adding', image_filenames[order[idx]])
-            #         continue
-        
 #----------------------------------------------------------------------------
             
 def create_from_image_folders(tfrecord_dir, image_dir, shuffle, ignore_labels):

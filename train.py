@@ -552,7 +552,7 @@ def main():
     group.add_argument('--res',    help='Dataset resolution (default: highest available)', type=int, metavar='INT')
     group.add_argument('--mirror', help='Augment dataset with x-flips (default: false)', type=_str_to_bool, metavar='BOOL')
     group.add_argument('--mirrory', help='Augment dataset with y-flips (default: false)', type=_str_to_bool, metavar='BOOL')
-    group.add_argument('--use-raw', help='Use raw image dataset, i.e. created from create_from_images_raw (default: %(default)s)', default=True, metavar='BOOL', type=_str_to_bool)
+    group.add_argument('--use-raw', help='Use raw image dataset, i.e. created from create_from_images_raw (default: %(default)s)', default=False, metavar='BOOL', type=_str_to_bool)
 
     group = parser.add_argument_group('metrics')
     group.add_argument('--metrics',    help='Comma-separated list or "none" (default: fid50k_full)', type=_parse_comma_sep, metavar='LIST')
