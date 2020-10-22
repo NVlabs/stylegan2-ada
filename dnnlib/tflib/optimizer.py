@@ -132,7 +132,7 @@ class Optimizer:
         assert all(var.shape.as_list() == var_shape for var, var_shape in zip(trainable_vars, self._gradient_shapes))
 
         # Report memory usage if requested.
-        deps = []
+        deps = [loss]
         if self._report_mem_usage:
             self._report_mem_usage = False
             try:
