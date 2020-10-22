@@ -33,7 +33,7 @@ class TFRecordDataset:
         prefetch_mb     = 2048,     # Amount of data to prefetch (megabytes), 0 = disable prefetching.
         buffer_mb       = 256,      # Read buffer size (megabytes).
         num_threads     = 2,        # Number of concurrent threads.
-        use_raw=True,
+        use_raw=False,
         _is_validation  = False,
 ):
         self.tfrecord_dir       = tfrecord_dir
@@ -99,7 +99,8 @@ class TFRecordDataset:
         assert all(shape[0] == max_shape[0] for shape in tfr_shapes)
         assert all(shape[1] == shape[2] for shape in tfr_shapes)
         assert all(shape[1] == self.resolution // (2**lod) for shape, lod in zip(tfr_shapes, tfr_lods))
-        assert all(lod in tfr_lods for lod in range(self.resolution_log2 - 1))
+        # Breaks raw functions
+        # assert all(lod in tfr_lods for lod in range(self.resolution_log2 - 1))
 
         # Load labels.
         assert max_label_size == 'full' or max_label_size >= 0
@@ -228,15 +229,14 @@ class TFRecordDataset:
 
     @staticmethod
     def parse_tfrecord_tf_raw(record):
-    features = tf.parse_single_example(
-        record,
-        features={
-            "shape": tf.FixedLenFeature([3], tf.int64),
-            "img": tf.FixedLenFeature([], tf.string),
-        },
-    )
-    image = tf.image.decode_image(features['img']) 
-    return tf.transpose(image, [2,0,1]) 
+        features = tf.parse_single_example(record, 
+            features={
+                "shape": tf.FixedLenFeature([3], tf.int64),
+                "img": tf.FixedLenFeature([], tf.string),
+            }
+        )
+        image = tf.image.decode_image(features['img']) 
+        return tf.transpose(image, [2,0,1]) 
 
     # Parse individual image from a tfrecords file into NumPy array.
     @staticmethod
@@ -262,11 +262,11 @@ class TFRecordDataset:
 #----------------------------------------------------------------------------
 # Construct a dataset object using the given options.
 
-def load_dataset(path=None, resolution=None, max_images=None, max_label_size=0, mirror_augment=False, mirror_augment_v=False, repeat=True, shuffle=True, seed=None):
+def load_dataset(path=None, use_raw=False, resolution=None, max_images=None, max_label_size=0, mirror_augment=False, mirror_augment_v=False, repeat=True, shuffle=True, seed=None):
     _ = seed
     assert os.path.isdir(path)
     return TFRecordDataset(
-        tfrecord_dir=path,
+        tfrecord_dir=path, use_raw=use_raw,
         resolution=resolution, max_images=max_images, max_label_size=max_label_size,
         mirror_augment=mirror_augment, mirror_augment_v=mirror_augment_v, repeat=repeat, shuffle=shuffle)
 
