@@ -36,7 +36,7 @@ def error(msg):
 #----------------------------------------------------------------------------
 
 class TFRecordExporter:
-    def __init__(self, tfrecord_dir, expected_images, print_progress=True, progress_interval=10, tfr_prefix=None):
+    def __init__(self, tfrecord_dir, expected_images, resolution_log2=7, print_progress=True, progress_interval=10, tfr_prefix=None):
         self.tfrecord_dir       = tfrecord_dir
         if tfr_prefix is None:
             self.tfr_prefix = os.path.join(self.tfrecord_dir, os.path.basename(self.tfrecord_dir))
@@ -45,7 +45,8 @@ class TFRecordExporter:
         self.expected_images    = expected_images
         self.cur_images         = 0
         self.shape              = None
-        self.resolution_log2    = None
+        # self.resolution_log2    = None
+        self.resolution_log2    = resolution_log2
         self.tfr_writers        = []
         self.print_progress     = print_progress
         self.progress_interval  = progress_interval
@@ -94,6 +95,40 @@ class TFRecordExporter:
             ex = tf.train.Example(features=tf.train.Features(feature={
                 'shape': tf.train.Feature(int64_list=tf.train.Int64List(value=quant.shape)),
                 'data': tf.train.Feature(bytes_list=tf.train.BytesList(value=[quant.tostring()]))}))
+            tfr_writer.write(ex.SerializeToString())
+        self.cur_images += 1
+
+    def create_tfr_writer(self, shape):
+        self.shape = [shape[2], shape[0], shape[1]]
+        assert self.shape[0] in [1, 3]
+        assert self.shape[1] % (2 ** self.resolution_log2) == 0
+        assert self.shape[2] % (2 ** self.resolution_log2) == 0
+        tfr_opt = tf.python_io.TFRecordOptions(
+            tf.python_io.TFRecordCompressionType.NONE
+        )
+        tfr_file = self.tfr_prefix + "-r%02d.tfrecords" % (
+                    self.resolution_log2
+        )
+        self.tfr_writers.append(tf.python_io.TFRecordWriter(tfr_file, tfr_opt))
+
+    def add_image_raw(self, encoded_jpg):
+        if self.print_progress and self.cur_images % self.progress_interval == 0:
+            print(
+                "%d / %d\r" % (self.cur_images, self.expected_images),
+                end="",
+                flush=True,
+            )
+        for lod, tfr_writer in enumerate(self.tfr_writers):
+            ex = tf.train.Example(
+                features=tf.train.Features(
+                    feature={
+                        "shape": tf.train.Feature(
+                            int64_list=tf.train.Int64List(value=self.shape)
+                        ),
+                        "img":tf.train.Feature(bytes_list=tf.train.BytesList(value=[encoded_jpg]))
+                    }
+                )
+            )
             tfr_writer.write(ex.SerializeToString())
         self.cur_images += 1
 
@@ -678,7 +713,63 @@ def create_from_images(tfrecord_dir, image_dir, shuffle):
             else:
                 img = img.transpose([2, 0, 1]) # HWC => CHW
             tfr.add_image(img)
-            
+
+#----------------------------------------------------------------------------
+
+def _get_all_files(path):
+    if os.path.isfile(path):
+        return [path]
+
+    possible_files = sorted(glob.glob(os.path.join(path, "*")))
+    return_list = []
+    for possible_file in possible_files:
+        return_list.extend(_get_all_files(possible_file))
+    return return_list
+
+def create_from_images_raw(tfrecord_dir, image_dir, shuffle, resolution_log2=7, resize=None):
+    print('Loading images from "%s"' % image_dir)
+    image_filenames = _get_all_files(image_dir)
+    print(f"detected {len(image_filenames)} images ...")
+    if len(image_filenames) == 0:
+        error("No input images found")
+    
+    img = np.asarray(PIL.Image.open(image_filenames[0]))
+    resolution = img.shape[0]
+    channels = img.shape[2] if img.ndim == 3 else 1
+    if img.shape[1] != resolution:
+        error('Input images must have the same width and height')
+    if resolution != 2 ** int(np.floor(np.log2(resolution))):
+        error('Input image resolution must be a power-of-two')
+    if channels not in [1, 3]:
+        error('Input images must be stored as RGB or grayscale')
+
+    with TFRecordExporter(tfrecord_dir, len(image_filenames), resolution_log2=resolution_log2) as tfr:
+        order = tfr.choose_shuffled_order() if shuffle else np.arange(len(image_filenames))
+        tfr.create_tfr_writer(img.shape)
+        for idx in range(order.size):
+            with tf.gfile.FastGFile(image_filenames[order[idx]], 'rb') as fid:
+                try:
+                    tfr.add_image_raw(fid.read())
+                except:
+                    print ('error when adding', image_filenames[order[idx]])
+                    continue
+
+    # with TFRecordExporter(tfrecord_dir, len(image_filenames)) as tfr:
+    #     order = (
+    #         tfr.choose_shuffled_order() if shuffle else np.arange(len(image_filenames))
+    #     )
+    #     tfr.create_tfr_writer(img.shape)
+    #     print("Adding the images to tfrecords ...")
+    #     for idx in range(order.size):
+    #         if idx % 1000 == 0:
+    #             print ("added images", idx)
+            # with tf.gfile.FastGFile(image_filenames[order[idx]], 'rb') as fid:
+            #     try:
+            #         tfr.add_image_raw(fid.read())
+            #     except:
+            #         print ('error when adding', image_filenames[order[idx]])
+            #         continue
+        
 #----------------------------------------------------------------------------
             
 def create_from_image_folders(tfrecord_dir, image_dir, shuffle, ignore_labels):
@@ -720,6 +811,7 @@ def create_from_image_folders(tfrecord_dir, image_dir, shuffle, ignore_labels):
     with TFRecordExporter(tfrecord_dir, len(images)) as tfr:
         order = tfr.choose_shuffled_order() if shuffle else np.arange(len(images))
         for idx in range(order.size):
+            # print('processing image: %s' % images[order[idx]])
             img = np.asarray(PIL.Image.open(images[order[idx]]))
             if channels == 1:
                 img = img[np.newaxis, :, :] # HW => CHW
@@ -1034,6 +1126,16 @@ def execute_cmdline(argv):
     p.add_argument(     'tfrecord_dir',     help='New dataset directory to be created')
     p.add_argument(     'image_dir',        help='Directory containing the images')
     p.add_argument(     '--shuffle',        help='Randomize image order (default: 1)', type=int, default=1)
+
+    p = add_command(    'create_from_images_raw',
+                    "Create dataset from a directory full of images. Please be careful"
+                    "since the tool recursively searches inside every sub-directory for image files",
+                    "create_from_images_raw datasets/mydataset myimagedir")
+    p.add_argument(      "tfrecord_dir", help="New dataset directory to be created")
+    p.add_argument(      "image_dir", help="Directory containing the images")
+    p.add_argument(      "--resize", help="resize to given power of 2 sized square images (default: None)", type=int, default=None, required=False)
+    p.add_argument(      "--shuffle", help="Randomize image order (default: 1)", type=int, default=1)
+    p.add_argument(      "--resolution_log2", help="image width and height should be multiple of 2**res_log2 (default: 7)", type=int, default=7)
     
     p = add_command(    'create_from_image_folders', 'Create dataset from a directory full of images. Use the folders to generate labels.',
                                             'create_from_images datasets/mydataset myimagedir')

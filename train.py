@@ -38,6 +38,7 @@ def setup_training_options(
     res        = None, # Override dataset resolution: <int>, default = highest available
     mirror     = None, # Augment dataset with x-flips: <bool>, default = False
     mirrory    = None, # Augment dataset with y-flips: <bool>, default = False
+    use_raw    = None, 
 
     # Metrics (not included in desc).
     metrics    = None, # List of metric names: [], ['fid50k_full'] (default), ...
@@ -134,6 +135,8 @@ def setup_training_options(
     if mirrory:
         desc += '-mirrory'
     args.train_dataset_args.mirror_augment_v = mirrory
+
+    args.train_dataset_args.use_raw = use_raw
 
     # ----------------------------
     # Metrics: metrics, metricdata
@@ -549,6 +552,7 @@ def main():
     group.add_argument('--res',    help='Dataset resolution (default: highest available)', type=int, metavar='INT')
     group.add_argument('--mirror', help='Augment dataset with x-flips (default: false)', type=_str_to_bool, metavar='BOOL')
     group.add_argument('--mirrory', help='Augment dataset with y-flips (default: false)', type=_str_to_bool, metavar='BOOL')
+    group.add_argument('--use-raw', help='Use raw image dataset, i.e. created from create_from_images_raw (default: %(default)s)', default=True, metavar='BOOL', type=_str_to_bool)
 
     group = parser.add_argument_group('metrics')
     group.add_argument('--metrics',    help='Comma-separated list or "none" (default: fid50k_full)', type=_parse_comma_sep, metavar='LIST')

@@ -33,6 +33,7 @@ class TFRecordDataset:
         prefetch_mb     = 2048,     # Amount of data to prefetch (megabytes), 0 = disable prefetching.
         buffer_mb       = 256,      # Read buffer size (megabytes).
         num_threads     = 2,        # Number of concurrent threads.
+        use_raw=True,
         _is_validation  = False,
 ):
         self.tfrecord_dir       = tfrecord_dir
@@ -73,7 +74,10 @@ class TFRecordDataset:
         for tfr_file in tfr_files:
             tfr_opt = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.NONE)
             for record in tf.python_io.tf_record_iterator(tfr_file, tfr_opt):
-                tfr_shapes.append(self.parse_tfrecord_np(record).shape)
+                if use_raw:
+                    tfr_shapes.append(parse_tfrecord_np_raw(record))
+                else:
+                    tfr_shapes.append(parse_tfrecord_np(record).shape)
                 break
 
         # Autodetect label filename.
@@ -118,11 +122,18 @@ class TFRecordDataset:
             for tfr_file, tfr_shape, tfr_lod in zip(tfr_files, tfr_shapes, tfr_lods):
                 if tfr_lod < 0:
                     continue
-                dset = tf.data.TFRecordDataset(tfr_file, compression_type='', buffer_size=buffer_mb<<20)
+
+                tfr_file = tfr_files[-1]  # should be the highest resolution tf_record file
+                tfr_shape = tfr_shapes[-1]  # again the highest resolution shape
+                dset = tf.data.TFRecordDataset(tfr_file, compression_type="", buffer_size=buffer_mb<< 20)
                 if max_images is not None:
                     dset = dset.take(max_images)
-                dset = dset.map(self.parse_tfrecord_tf, num_parallel_calls=num_threads)
+                if use_raw:
+                    dset = dset.map(parse_tfrecord_tf_raw, num_parallel_calls=num_threads)
+                else:
+                    dset = dset.map(parse_tfrecord_tf, num_parallel_calls=num_threads)
                 dset = tf.data.Dataset.zip((dset, self._tf_labels_dataset))
+
                 bytes_per_item = np.prod(tfr_shape) * np.dtype(self.dtype).itemsize
                 if self.shuffle and shuffle_mb > 0:
                     dset = dset.shuffle(((shuffle_mb << 20) - 1) // bytes_per_item + 1)
@@ -223,6 +234,18 @@ class TFRecordDataset:
         shape = ex.features.feature['shape'].int64_list.value # pylint: disable=no-member
         data = ex.features.feature['data'].bytes_list.value[0] # pylint: disable=no-member
         return np.fromstring(data, np.uint8).reshape(shape)
+
+    @staticmethod
+    def parse_tfrecord_np_raw(record):
+        ex = tf.train.Example()
+        ex.ParseFromString(record)
+        shape = ex.features.feature[
+            "shape"
+        ].int64_list.value  # temporary pylint workaround # pylint: disable=no-member
+        img = ex.features.feature["img"].bytes_list.value[
+            0
+        ]  # temporary pylint workaround # pylint: disable=no-member
+        return shape
 
 #----------------------------------------------------------------------------
 # Construct a dataset object using the given options.
