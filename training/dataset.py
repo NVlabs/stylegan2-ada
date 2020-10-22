@@ -75,9 +75,9 @@ class TFRecordDataset:
             tfr_opt = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.NONE)
             for record in tf.python_io.tf_record_iterator(tfr_file, tfr_opt):
                 if use_raw:
-                    tfr_shapes.append(parse_tfrecord_np_raw(record))
+                    tfr_shapes.append(self.parse_tfrecord_np_raw(record))
                 else:
-                    tfr_shapes.append(parse_tfrecord_np(record).shape)
+                    tfr_shapes.append(self.parse_tfrecord_np(record).shape)
                 break
 
         # Autodetect label filename.
@@ -129,9 +129,9 @@ class TFRecordDataset:
                 if max_images is not None:
                     dset = dset.take(max_images)
                 if use_raw:
-                    dset = dset.map(parse_tfrecord_tf_raw, num_parallel_calls=num_threads)
+                    dset = dset.map(self.parse_tfrecord_tf_raw, num_parallel_calls=num_threads)
                 else:
-                    dset = dset.map(parse_tfrecord_tf, num_parallel_calls=num_threads)
+                    dset = dset.map(self.parse_tfrecord_tf, num_parallel_calls=num_threads)
                 dset = tf.data.Dataset.zip((dset, self._tf_labels_dataset))
 
                 bytes_per_item = np.prod(tfr_shape) * np.dtype(self.dtype).itemsize
@@ -225,6 +225,18 @@ class TFRecordDataset:
             'data': tf.FixedLenFeature([], tf.string)})
         data = tf.decode_raw(features['data'], tf.uint8)
         return tf.reshape(data, features['shape'])
+
+    @staticmethod
+    def parse_tfrecord_tf_raw(record):
+    features = tf.parse_single_example(
+        record,
+        features={
+            "shape": tf.FixedLenFeature([3], tf.int64),
+            "img": tf.FixedLenFeature([], tf.string),
+        },
+    )
+    image = tf.image.decode_image(features['img']) 
+    return tf.transpose(image, [2,0,1]) 
 
     # Parse individual image from a tfrecords file into NumPy array.
     @staticmethod
