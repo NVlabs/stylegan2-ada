@@ -11,6 +11,7 @@
 import argparse
 import sys
 import os
+import subprocess
 import pickle
 import re
 
@@ -113,7 +114,7 @@ def generate_images(network_pkl, seeds, truncation_psi, outdir, class_idx=None, 
 
 #----------------------------------------------------------------------------
 
-def truncation_traversal(network_pkl,npys, class_idx=None, seed=[0],start=-1.0,stop=1.0,increment=0.1):
+def truncation_traversal(network_pkl,npys,outdir,class_idx=None, seed=[0],start=-1.0,stop=1.0,increment=0.1,framerate=24):
     tflib.init_tf()
     print('Loading networks from "%s"...' % network_pkl)
     with dnnlib.util.open_url(network_pkl) as fp:
@@ -132,7 +133,7 @@ def truncation_traversal(network_pkl,npys, class_idx=None, seed=[0],start=-1.0,s
     count = 1
     trunc = start
 
-
+    images = []
     while trunc <= stop:
         Gs_kwargs['truncation_psi'] = trunc
         print('Generating truncation %0.2f' % trunc)
@@ -140,11 +141,15 @@ def truncation_traversal(network_pkl,npys, class_idx=None, seed=[0],start=-1.0,s
         rnd = np.random.RandomState(seed)
         z = rnd.randn(1, *Gs.input_shape[1:]) # [minibatch, component]
         tflib.set_vars({var: rnd.randn(*var.shape.as_list()) for var in noise_vars}) # [height, width]
-        images = Gs.run(z, label, **Gs_kwargs) # [minibatch, height, width, channel]
-        PIL.Image.fromarray(images[0], 'RGB').save(dnnlib.make_run_dir_path('frame%05d.png' % count))
+        image = Gs.run(z, label, **Gs_kwargs) # [minibatch, height, width, channel]
+        images.append(image[0])
+        PIL.Image.fromarray(image[0], 'RGB').save(f'{outdir}/frame{count:04d}.png')
 
         trunc+=increment
         count+=1
+
+    cmd="ffmpeg -y -r {} -i {}/frame%04d.png -vcodec libx264 -pix_fmt yuv420p {}/truncation-traversal-seed{}-start{}-stop{}.mp4".format(framerate,outdir,outdir,seed[0],start,stop)
+    subprocess.call(cmd, shell=True)
 
 #----------------------------------------------------------------------------
 
@@ -361,11 +366,12 @@ def main():
     parser_truncation_traversal.add_argument('--network', help='Network pickle filename', dest='network_pkl', required=True)
     parser_truncation_traversal.add_argument('--seed', type=_parse_num_range, help='Singular seed value')
     parser_truncation_traversal.add_argument('--npys', type=_parse_npy_files, help='List of .npy files')
+    parser_truncation_traversal.add_argument('--framerate', type=int, help='Starting value',default=24)
     parser_truncation_traversal.add_argument('--start', type=float, help='Starting value')
     parser_truncation_traversal.add_argument('--stop', type=float, help='Stopping value')
     parser_truncation_traversal.add_argument('--increment', type=float, help='Incrementing value')
     parser_truncation_traversal.add_argument('--outdir', help='Root directory for run results (default: %(default)s)', default='out', metavar='DIR')
-    parser_generate_images.set_defaults(func=truncation_traversal)
+    parser_truncation_traversal.set_defaults(func=truncation_traversal)
 
     parser_lerp_video = subparsers.add_parser('lerp-video', help='Generate interpolation video (lerp) between random vectors')
     parser_lerp_video.add_argument('--network', help='Path to network pickle filename', dest='network_pkl', required=True)
