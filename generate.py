@@ -305,7 +305,7 @@ def main():
     parser_generate_images.add_argument('--network', help='Network pickle filename', dest='network_pkl', required=True)
     parser_generate_images.add_argument('--seeds', type=_parse_num_range, help='List of random seeds', dest='seeds', required=True)
     parser_generate_images.add_argument('--truncation-psi', type=float, help='Truncation psi (default: %(default)s)', dest='truncation_psi', default=0.5)
-    parser_generate_images.add_argument('--class', type=int, help='Class label (default: %(default)s)', default='unconditional', dest='class_idx')
+    parser_generate_images.add_argument('--class', dest='class_idx', type=int, help='Class label (default: unconditional)')
     parser_generate_images.add_argument('--create-grid', action='store_true', help='Add flag to save the generated images in a grid', dest='grid')
     parser_generate_images.add_argument('--outdir', help='Root directory for run results (default: %(default)s)', default='out', metavar='DIR')
     parser_generate_images.set_defaults(func=generate_images)
