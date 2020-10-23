@@ -153,6 +153,158 @@ def truncation_traversal(network_pkl,npys,outdir,class_idx=None, seed=[0],start=
 
 #----------------------------------------------------------------------------
 
+def valmap(value, istart, istop, ostart, ostop):
+  return ostart + (ostop - ostart) * ((value - istart) / (istop - istart))
+
+class OSN():
+  min=-1
+  max= 1
+
+  def __init__(self,seed,diameter):
+    self.tmp = OpenSimplex(seed)
+    self.d = diameter
+    self.x = 0
+    self.y = 0
+
+  def get_val(self,angle):
+    self.xoff = valmap(np.cos(angle), -1, 1, self.x, self.x + self.d);
+    self.yoff = valmap(np.sin(angle), -1, 1, self.y, self.y + self.d);
+    return self.tmp.noise2d(self.xoff,self.yoff)
+
+def get_noiseloop(endpoints, nf, d, start_seed):
+    features = []
+    zs = []
+    for i in range(512):
+      features.append(OSN(i+start_seed,d))
+
+    inc = (np.pi*2)/nf
+    for f in range(nf):
+      z = np.random.randn(1, 512)
+      for i in range(512):
+        z[0,i] = features[i].get_val(inc*f) 
+      zs.append(z)
+
+    return zs
+    
+def line_interpolate(zs, steps):
+   out = []
+   for i in range(len(zs)-1):
+    for index in range(steps):
+     fraction = index/float(steps) 
+     out.append(zs[i+1]*fraction + zs[i]*(1-fraction))
+   return out
+   
+def generate_zs_from_seeds(seeds,Gs):
+    zs = []
+    for seed_idx, seed in enumerate(seeds):
+        rnd = np.random.RandomState(seed)
+        z = rnd.randn(1, *Gs.input_shape[1:]) # [minibatch, component]
+        zs.append(z)
+    return zs
+
+def generate_latent_images(zs, truncation_psi, outdir, save_npy,prefix):
+    Gs_kwargs = {
+        'output_transform': dict(func=tflib.convert_images_to_uint8, nchw_to_nhwc=True),
+        'randomize_noise': False
+    }
+    
+    if not isinstance(truncation_psi, list):
+        truncation_psi = [truncation_psi] * len(zs)
+    
+    for z_idx, z in enumerate(zs):
+        if isinstance(z,list):
+          z = np.array(z).reshape(1,512)
+        elif isinstance(z,np.ndarray):
+          z.reshape(1,512)
+        print('Generating image for step %d/%d ...' % (z_idx, len(zs)))
+        Gs_kwargs['truncation_psi'] = truncation_psi[z_idx]
+        noise_rnd = np.random.RandomState(1) # fix noise
+        tflib.set_vars({var: noise_rnd.randn(*var.shape.as_list()) for var in noise_vars}) # [height, width]
+        images = Gs.run(z, None, **Gs_kwargs) # [minibatch, height, width, channel]
+        PIL.Image.fromarray(images[0], 'RGB').save(f'{outdir}/{prefix}{z_idx:05d}.png')
+        if save_npy:
+          np.save(dnnlib.make_run_dir_path('%s%05d.npy' % (prefix,z_idx)), z)
+
+def generate_latent_walk(network_pkl, truncation_psi, outdir, walk_type, frames, seeds, npys, save_vector, diameter=2.0, start_seed=0, framerate=24 ):
+    global _G, _D, Gs, noise_vars
+    tflib.init_tf()
+    print('Loading networks from "%s"...' % network_pkl)
+    with dnnlib.util.open_url(network_pkl) as fp:
+        _G, _D, Gs = pickle.load(fp) 
+
+    os.makedirs(outdir, exist_ok=True)
+    
+    # Render images for dlatents initialized from random seeds.
+    Gs_kwargs = {
+        'output_transform': dict(func=tflib.convert_images_to_uint8, nchw_to_nhwc=True),
+        'randomize_noise': False
+    }
+    if truncation_psi is not None:
+        Gs_kwargs['truncation_psi'] = truncation_psi
+
+    noise_vars = [var for name, var in Gs.components.synthesis.vars.items() if name.startswith('noise')]
+    zs = []
+    
+    if(len(seeds) > 0):
+        zs = generate_zs_from_seeds(seeds,Gs)
+    # elif(len(npys) > 0):
+    #     zs = npys
+        
+    if(len(zs) > 2 ):
+        print('not enough values to generate walk')
+#         return false;
+
+    walk_type = walk_type.split('-')
+    
+    if walk_type[0] == 'line':
+        number_of_steps = int(frames/(len(zs)-1))+1
+    
+        if (len(walk_type)>1 and walk_type[1] == 'w'):
+          ws = []
+          for i in range(len(zs)):
+            ws.append(convertZtoW(zs[i]))
+          points = line_interpolate(ws,number_of_steps)
+          zpoints = line_interpolate(zs,number_of_steps)
+        else:
+          points = line_interpolate(zs,number_of_steps)
+
+    # from Gene Kogan
+    elif walk_type[0] == 'bspline':
+        # bspline in w doesnt work yet
+        # if (len(walk_type)>1 and walk_type[1] == 'w'):
+        #   ws = []
+        #   for i in range(len(zs)):
+        #     ws.append(convertZtoW(zs[i]))
+
+        #   print(ws[0].shape)
+        #   w = []
+        #   for i in range(len(ws)):
+        #     w.append(np.asarray(ws[i]).reshape(512,18))
+        #   points = get_latent_interpolation_bspline(ws,frames,3, 20, shuffle=False)
+        # else:
+          z = []
+          for i in range(len(zs)):
+            z.append(np.asarray(zs[i]).reshape(512))
+          points = get_latent_interpolation_bspline(z,frames,3, 20, shuffle=False)
+
+    # from Dan Shiffman: https://editor.p5js.org/dvs/sketches/Gb0xavYAR
+    elif walk_type[0] == 'noiseloop':
+        points = get_noiseloop(None,frames,diameter,start_seed)
+
+    if (walk_type[0] == 'line' and len(walk_type)>1 and walk_type[1] == 'w'):
+      # print(points[0][:,:,1])
+      # print(zpoints[0][:,1])
+      # ws = []
+      # for i in enumerate(len(points)):
+      #   ws.append(convertZtoW(points[i]))
+      generate_images_in_w_space(points, truncation_psi,save_vector,'frame')
+    elif (len(walk_type)>1 and walk_type[1] == 'w'):
+      print('%s is not currently supported in w space, please change your interpolation type' % (walk_type[0]))
+    else:
+      generate_latent_images(points, truncation_psi, outdir, save_vector,'frame')
+
+#----------------------------------------------------------------------------
+
 def lerp_video(network_pkl,                # Path to pretrained model pkl file
                seeds,                      # Random seeds
                grid_w=None,                # Number of columns
@@ -372,6 +524,20 @@ def main():
     parser_truncation_traversal.add_argument('--increment', type=float, help='Incrementing value')
     parser_truncation_traversal.add_argument('--outdir', help='Root directory for run results (default: %(default)s)', default='out', metavar='DIR')
     parser_truncation_traversal.set_defaults(func=truncation_traversal)
+
+    parser_generate_latent_walk = subparsers.add_parser('generate-latent-walk', help='Generate latent walk')
+    parser_generate_latent_walk.add_argument('--network', help='Network pickle filename', dest='network_pkl', required=True)
+    parser_generate_latent_walk.add_argument('--trunc', type=float, help='Truncation psi (default: %(default)s)', dest='truncation_psi', default=0.5)
+    parser_generate_latent_walk.add_argument('--walk-type', help='Type of walk (default: %(default)s)', default='line')
+    parser_generate_latent_walk.add_argument('--frames', type=int, help='Frame count (default: %(default)s', default=240)
+    parser_generate_latent_walk.add_argument('--framerate', type=int, help='Starting value',default=24)
+    parser_generate_latent_walk.add_argument('--seeds', type=_parse_num_range, help='List of random seeds')
+    parser_generate_latent_walk.add_argument('--npys', type=_parse_npy_files, help='List of .npy files')
+    parser_generate_latent_walk.add_argument('--save_vector', dest='save_vector', action='store_true', help='also save vector in .npy format')
+    parser_generate_latent_walk.add_argument('--diameter', type=float, help='diameter of noise loop', default=2.0)
+    parser_generate_latent_walk.add_argument('--start_seed', type=int, help='random seed to start noise loop from', default=0)
+    parser_generate_latent_walk.add_argument('--outdir', help='Root directory for run results (default: %(default)s)', default='out', metavar='DIR')
+    parser_generate_latent_walk.set_defaults(func=generate_latent_walk)
 
     parser_lerp_video = subparsers.add_parser('lerp-video', help='Generate interpolation video (lerp) between random vectors')
     parser_lerp_video.add_argument('--network', help='Path to network pickle filename', dest='network_pkl', required=True)
