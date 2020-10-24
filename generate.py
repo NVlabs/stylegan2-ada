@@ -24,6 +24,7 @@ import dnnlib.tflib as tflib
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import moviepy.editor
+from opensimplex import OpenSimplex
 
 import warnings # mostly numpy warnings for me
 warnings.filterwarnings('ignore', category=FutureWarning)
@@ -149,7 +150,7 @@ def truncation_traversal(network_pkl,npys,outdir,class_idx=None, seed=[0],start=
         count+=1
 
     cmd="ffmpeg -y -r {} -i {}/frame%04d.png -vcodec libx264 -pix_fmt yuv420p {}/truncation-traversal-seed{}-start{}-stop{}.mp4".format(framerate,outdir,outdir,seed[0],start,stop)
-    subprocess.call(cmd, shell=True)
+    subprocess.call(cmd)
 
 #----------------------------------------------------------------------------
 
@@ -202,7 +203,14 @@ def generate_zs_from_seeds(seeds,Gs):
         zs.append(z)
     return zs
 
-def generate_latent_images(zs, truncation_psi, outdir, save_npy,prefix):
+def convertZtoW(latent, truncation_psi=0.7, truncation_cutoff=9):
+    dlatent = Gs.components.mapping.run(latent, None) # [seed, layer, component]
+    dlatent_avg = Gs.get_var('dlatent_avg') # [component]
+    dlatent = dlatent_avg + (dlatent - dlatent_avg) * truncation_psi
+    
+    return dlatent
+
+def generate_latent_images(zs, truncation_psi, outdir, save_npy,prefix,vidname,framerate):
     Gs_kwargs = {
         'output_transform': dict(func=tflib.convert_images_to_uint8, nchw_to_nhwc=True),
         'randomize_noise': False
@@ -225,6 +233,29 @@ def generate_latent_images(zs, truncation_psi, outdir, save_npy,prefix):
         if save_npy:
           np.save(dnnlib.make_run_dir_path('%s%05d.npy' % (prefix,z_idx)), z)
 
+    cmd="ffmpeg -y -r {} -i {}/{}%05d.png -vcodec libx264 -pix_fmt yuv420p {}/walk-{}-{}fps.mp4".format(framerate,outdir,prefix,outdir,vidname,framerate)
+    subprocess.call(cmd, shell=True)
+
+def generate_images_in_w_space(ws, truncation_psi,outdir,save_npy,prefix,vidname,framerate):
+
+    Gs_kwargs = {
+        'output_transform': dict(func=tflib.convert_images_to_uint8, nchw_to_nhwc=True),
+        'randomize_noise': False,
+        'truncation_psi': truncation_psi
+    }
+    
+    for w_idx, w in enumerate(ws):
+        print('Generating image for step %d/%d ...' % (w_idx, len(ws)))
+        noise_rnd = np.random.RandomState(1) # fix noise
+        tflib.set_vars({var: noise_rnd.randn(*var.shape.as_list()) for var in noise_vars}) # [height, width]
+        images = Gs.components.synthesis.run(w, **Gs_kwargs) # [minibatch, height, width, channel]
+        PIL.Image.fromarray(images[0], 'RGB').save(f'{outdir}/{prefix}{w_idx:05d}.png')
+        if save_npy:
+          np.save(dnnlib.make_run_dir_path('%s%05d.npy' % (prefix,w_idx)), w)
+
+    cmd="ffmpeg -y -r {} -i {}/{}%05d.png -vcodec libx264 -pix_fmt yuv420p {}/walk-{}-{}fps.mp4".format(framerate,outdir,prefix,outdir,vidname,framerate)
+    subprocess.call(cmd, shell=True)
+
 def generate_latent_walk(network_pkl, truncation_psi, outdir, walk_type, frames, seeds, npys, save_vector, diameter=2.0, start_seed=0, framerate=24 ):
     global _G, _D, Gs, noise_vars
     tflib.init_tf()
@@ -245,8 +276,6 @@ def generate_latent_walk(network_pkl, truncation_psi, outdir, walk_type, frames,
     noise_vars = [var for name, var in Gs.components.synthesis.vars.items() if name.startswith('noise')]
     zs = []
     
-    if(len(seeds) > 0):
-        zs = generate_zs_from_seeds(seeds,Gs)
     # elif(len(npys) > 0):
     #     zs = npys
         
@@ -257,6 +286,9 @@ def generate_latent_walk(network_pkl, truncation_psi, outdir, walk_type, frames,
     walk_type = walk_type.split('-')
     
     if walk_type[0] == 'line':
+        if(len(seeds) > 0):
+            zs = generate_zs_from_seeds(seeds,Gs)
+
         number_of_steps = int(frames/(len(zs)-1))+1
     
         if (len(walk_type)>1 and walk_type[1] == 'w'):
@@ -297,11 +329,13 @@ def generate_latent_walk(network_pkl, truncation_psi, outdir, walk_type, frames,
       # ws = []
       # for i in enumerate(len(points)):
       #   ws.append(convertZtoW(points[i]))
-      generate_images_in_w_space(points, truncation_psi,save_vector,'frame')
+        seed_out = 'w-' + walk_type[0] + ('-'.join([str(seed) for seed in seeds]))
+        generate_images_in_w_space(points, truncation_psi,outdir,save_vector,'frame', seed_out, framerate)
     elif (len(walk_type)>1 and walk_type[1] == 'w'):
       print('%s is not currently supported in w space, please change your interpolation type' % (walk_type[0]))
     else:
-      generate_latent_images(points, truncation_psi, outdir, save_vector,'frame')
+        seed_out = 'z-' + walk_type[0] + ('-'.join([str(seed) for seed in seeds]))
+        generate_latent_images(points, truncation_psi, outdir, save_vector,'frame', seed_out, framerate)
 
 #----------------------------------------------------------------------------
 
@@ -423,8 +457,18 @@ def lerp_video(network_pkl,                # Path to pretrained model pkl file
 
 #----------------------------------------------------------------------------
 
-# My extended version of this helper function:
 def _parse_num_range(s):
+    '''Accept either a comma separated list of numbers 'a,b,c' or a range 'a-c' and return as a list of ints.'''
+
+    range_re = re.compile(r'^(\d+)-(\d+)$')
+    m = range_re.match(s)
+    if m:
+        return range(int(m.group(1)), int(m.group(2))+1)
+    vals = s.split(',')
+    return [int(x) for x in vals]
+
+# My extended version of this helper function:
+def _parse_num_range_ext(s):
     '''
     Input:
         s (str): Comma separated string of numbers 'a,b,c', a range 'a-c', or
@@ -518,7 +562,7 @@ def main():
     parser_truncation_traversal.add_argument('--network', help='Network pickle filename', dest='network_pkl', required=True)
     parser_truncation_traversal.add_argument('--seed', type=_parse_num_range, help='Singular seed value')
     parser_truncation_traversal.add_argument('--npys', type=_parse_npy_files, help='List of .npy files')
-    parser_truncation_traversal.add_argument('--framerate', type=int, help='Starting value',default=24)
+    parser_truncation_traversal.add_argument('--fps', type=int, help='Starting value',default=24,dest='framerate')
     parser_truncation_traversal.add_argument('--start', type=float, help='Starting value')
     parser_truncation_traversal.add_argument('--stop', type=float, help='Stopping value')
     parser_truncation_traversal.add_argument('--increment', type=float, help='Incrementing value')
@@ -530,7 +574,7 @@ def main():
     parser_generate_latent_walk.add_argument('--trunc', type=float, help='Truncation psi (default: %(default)s)', dest='truncation_psi', default=0.5)
     parser_generate_latent_walk.add_argument('--walk-type', help='Type of walk (default: %(default)s)', default='line')
     parser_generate_latent_walk.add_argument('--frames', type=int, help='Frame count (default: %(default)s', default=240)
-    parser_generate_latent_walk.add_argument('--framerate', type=int, help='Starting value',default=24)
+    parser_generate_latent_walk.add_argument('--fps', type=int, help='Starting value',default=24,dest='framerate')
     parser_generate_latent_walk.add_argument('--seeds', type=_parse_num_range, help='List of random seeds')
     parser_generate_latent_walk.add_argument('--npys', type=_parse_npy_files, help='List of .npy files')
     parser_generate_latent_walk.add_argument('--save_vector', dest='save_vector', action='store_true', help='also save vector in .npy format')
@@ -541,7 +585,7 @@ def main():
 
     parser_lerp_video = subparsers.add_parser('lerp-video', help='Generate interpolation video (lerp) between random vectors')
     parser_lerp_video.add_argument('--network', help='Path to network pickle filename', dest='network_pkl', required=True)
-    parser_lerp_video.add_argument('--seeds', type=_parse_num_range, help='List of random seeds', dest='seeds', required=True)
+    parser_lerp_video.add_argument('--seeds', type=_parse_num_range_ext, help='List of random seeds', dest='seeds', required=True)
     parser_lerp_video.add_argument('--grid-w', type=int, help='Video grid width/columns (default: %(default)s)', default=None, dest='grid_w')
     parser_lerp_video.add_argument('--grid-h', type=int, help='Video grid height/rows (default: %(default)s)', default=None, dest='grid_h')
     parser_lerp_video.add_argument('--trunc', type=float, help='Truncation psi (default: %(default)s)', default=1.0, dest='truncation_psi')
