@@ -121,6 +121,8 @@ def truncation_traversal(network_pkl,npys,outdir,class_idx=None, seed=[0],start=
     with dnnlib.util.open_url(network_pkl) as fp:
         _G, _D, Gs = pickle.load(fp)
 
+    os.makedirs(outdir, exist_ok=True)
+
     Gs_kwargs = {
         'output_transform': dict(func=tflib.convert_images_to_uint8, nchw_to_nhwc=True),
         'randomize_noise': False
