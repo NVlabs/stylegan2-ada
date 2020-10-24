@@ -333,7 +333,10 @@ def generate_latent_walk(network_pkl, truncation_psi, outdir, walk_type, frames,
     elif (len(walk_type)>1 and walk_type[1] == 'w'):
       print('%s is not currently supported in w space, please change your interpolation type' % (walk_type[0]))
     else:
-        seed_out = 'z-' + walk_type[0] + ('-'.join([str(seed) for seed in seeds]))
+        if(len(walk_type)>1):
+            seed_out = 'z-' + walk_type[0] + ('-'.join([str(seed) for seed in seeds]))
+        else:
+            seed_out = 'z-' + walk_type + ('-'.join([str(seed) for seed in seeds]))
         generate_latent_images(points, truncation_psi, outdir, save_vector,'frame', seed_out, framerate)
 
 #----------------------------------------------------------------------------
