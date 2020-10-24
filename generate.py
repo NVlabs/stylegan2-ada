@@ -144,13 +144,13 @@ def truncation_traversal(network_pkl,npys,outdir,class_idx=None, seed=[0],start=
         tflib.set_vars({var: rnd.randn(*var.shape.as_list()) for var in noise_vars}) # [height, width]
         image = Gs.run(z, label, **Gs_kwargs) # [minibatch, height, width, channel]
         images.append(image[0])
-        PIL.Image.fromarray(image[0], 'RGB').save(f'{outdir}/frame{count:04d}.png')
+        PIL.Image.fromarray(image[0], 'RGB').save(f'{outdir}/frame{count:05d}.png')
 
         trunc+=increment
         count+=1
 
-    cmd="ffmpeg -y -r {} -i {}/frame%04d.png -vcodec libx264 -pix_fmt yuv420p {}/truncation-traversal-seed{}-start{}-stop{}.mp4".format(framerate,outdir,outdir,seed[0],start,stop)
-    subprocess.call(cmd)
+    cmd="ffmpeg -y -r {} -i {}/frame%05d.png -vcodec libx264 -pix_fmt yuv420p {}/truncation-traversal-seed{}-start{}-stop{}.mp4".format(framerate,outdir,outdir,seed[0],start,stop)
+    subprocess.call(cmd, shell=True)
 
 #----------------------------------------------------------------------------
 
@@ -282,15 +282,15 @@ def generate_latent_walk(network_pkl, truncation_psi, outdir, walk_type, frames,
         print('not enough values to generate walk')
 #         return false;
 
-    walk_type = walk_type.split('-')
+    wt = walk_type.split('-')
     
-    if walk_type[0] == 'line':
+    if wt[0] == 'line':
         if(len(seeds) > 0):
             zs = generate_zs_from_seeds(seeds,Gs)
 
         number_of_steps = int(frames/(len(zs)-1))+1
     
-        if (len(walk_type)>1 and walk_type[1] == 'w'):
+        if (len(wt)>1 and wt[1] == 'w'):
           ws = []
           for i in range(len(zs)):
             ws.append(convertZtoW(zs[i]))
@@ -300,7 +300,7 @@ def generate_latent_walk(network_pkl, truncation_psi, outdir, walk_type, frames,
           points = line_interpolate(zs,number_of_steps)
 
     # from Gene Kogan
-    elif walk_type[0] == 'bspline':
+    elif wt[0] == 'bspline':
         # bspline in w doesnt work yet
         # if (len(walk_type)>1 and walk_type[1] == 'w'):
         #   ws = []
@@ -319,21 +319,24 @@ def generate_latent_walk(network_pkl, truncation_psi, outdir, walk_type, frames,
           points = get_latent_interpolation_bspline(z,frames,3, 20, shuffle=False)
 
     # from Dan Shiffman: https://editor.p5js.org/dvs/sketches/Gb0xavYAR
-    elif walk_type[0] == 'noiseloop':
+    elif wt[0] == 'noiseloop':
         points = get_noiseloop(None,frames,diameter,start_seed)
 
-    if (walk_type[0] == 'line' and len(walk_type)>1 and walk_type[1] == 'w'):
+    if (wt[0] == 'line' and len(wt)>1 and wt[1] == 'w'):
       # print(points[0][:,:,1])
       # print(zpoints[0][:,1])
       # ws = []
       # for i in enumerate(len(points)):
       #   ws.append(convertZtoW(points[i]))
-        seed_out = 'w-' + walk_type[0] + ('-'.join([str(seed) for seed in seeds]))
+        seed_out = 'w-' + wt[0] + ('-'.join([str(seed) for seed in seeds]))
         generate_images_in_w_space(points, truncation_psi,outdir,save_vector,'frame', seed_out, framerate)
-    elif (len(walk_type)>1 and walk_type[1] == 'w'):
-      print('%s is not currently supported in w space, please change your interpolation type' % (walk_type[0]))
+    elif (len(wt)>1 and wt[1] == 'w'):
+      print('%s is not currently supported in w space, please change your interpolation type' % (wt[0]))
     else:
-        seed_out = 'z-' + walk_type[0] + ('-'.join([str(seed) for seed in seeds]))
+        if(len(wt)>1):
+            seed_out = 'z-' + wt[0] + ('-'.join([str(seed) for seed in seeds]))
+        else:
+            seed_out = 'z-' + walk_type + '-seed' +str(start_seed)
         generate_latent_images(points, truncation_psi, outdir, save_vector,'frame', seed_out, framerate)
 
 #----------------------------------------------------------------------------
