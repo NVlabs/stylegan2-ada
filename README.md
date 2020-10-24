@@ -1,7 +1,7 @@
 ## Edits made to this repo
 
 * **Default GPU-based configs**: added configs to maximize GPU usage for 11GB. 24GB, and 48GB cards (use 11GB for 16GB cards)
-* **"Complex" configs**: Apply the cifar10 config to other datasets (good for complex/diversee datasets)
+* **"Complex" configs**: Apply the cifar10 config to other datasets (good for complex/diverse datasets) Use `11gb-gpu-complex` or `24gb-gpu-complex`
 * **Vertical Mirroring**: use `--mirrory=True` to flip training set top to bottom
 * **Interpolations methods**: Multiple interpolation methods included in the generate.py script
 * **Neighbor vectors**: Fine-tune seed selections by looking at vectors near it. Included in the generate.py script
