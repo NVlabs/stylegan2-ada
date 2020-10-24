@@ -2,6 +2,9 @@
 
 * **Default GPU-based configs**: added configs to maximize GPU usage for 11GB. 24GB, and 48GB cards (use 11GB for 16GB cards)
 * **Vertical Mirroring**: use `--mirrory=True` to flip training set top to bottom
+* **Interpolations methods**: Multiple interpolation methods included in the generate.py script
+* **Neighbor vectors**: Fine-tune seed selections by looking at vectors near it. Included in the generate.py script
+* **Flesh Digressions**: @aydao’s circular constant layer script edited to work with ADA see aydao_flesh_digressions.py
 * **Fakes .jpg**: save yourself a ton of space with fakes during training saved as .jpg instead of .png
 
 ## StyleGAN2 with adaptive discriminator augmentation (ADA)<br>&mdash; Official TensorFlow implementation
