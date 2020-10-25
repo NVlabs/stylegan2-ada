@@ -33,8 +33,8 @@ class TFRecordDataset:
         prefetch_mb     = 2048,     # Amount of data to prefetch (megabytes), 0 = disable prefetching.
         buffer_mb       = 256,      # Read buffer size (megabytes).
         num_threads     = 2,        # Number of concurrent threads.
-        use_raw=False,
         _is_validation  = False,
+        use_raw=False,
 ):
         self.tfrecord_dir       = tfrecord_dir
         self.resolution         = None
@@ -157,7 +157,8 @@ class TFRecordDataset:
         if self._cur_minibatch != minibatch_size or self._cur_lod != lod:
             self._tf_init_ops[lod].run({self._tf_minibatch_in: minibatch_size})
             self._cur_minibatch = minibatch_size
-            self._cur_lod = lod
+            # breaks raw loading?
+            #self._cur_lod = lod
 
     # Get next minibatch as TensorFlow expressions.
     def get_minibatch_tf(self):
