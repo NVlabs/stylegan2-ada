@@ -808,6 +808,58 @@ def create_from_image_folders(tfrecord_dir, image_dir, shuffle, ignore_labels):
             
 #----------------------------------------------------------------------------
 
+def create_from_image_folders_raw(tfrecord_dir, image_dir, shuffle, ignore_labels, resolution_log2=7):
+    images = []
+    labels = []
+    print('Loading images from "%s"' % image_dir)
+    
+    label_count = 0
+    for root, subdirs, files in os.walk(image_dir):
+        for subdir in subdirs:
+            folder_path = os.path.join(root, subdir)
+            print('\t Loading images from "%s" as label %d' % (folder_path, label_count))
+            # print('\t contains %d files' % len(os.listdir(folder_path)))
+
+            if(len(os.listdir(folder_path))):
+                for file in os.listdir(folder_path):
+                    images.append(os.path.join(folder_path,file))
+                    labels.append(label_count)
+                    # print(os.path.join(folder_path,file))
+            
+            label_count+=1
+
+    assert ignore_labels in [0, 1]
+    assert np.min(labels) == 0 and np.max(labels) == (label_count-1)
+    labels = np.array(labels)  
+    onehot = np.zeros((labels.size, np.max(labels) + 1), dtype=np.float32)
+    onehot[np.arange(labels.size), labels] = 1.0
+
+    img = np.asarray(PIL.Image.open(images[0]))
+    resolution = img.shape[0]
+    channels = img.shape[2] if img.ndim == 3 else 1
+    if img.shape[1] != resolution:
+        error('Input images must have the same width and height')
+    if resolution != 2 ** int(np.floor(np.log2(resolution))):
+        error('Input image resolution must be a power-of-two')
+    if channels not in [1, 3]:
+        error('Input images must be stored as RGB or grayscale')
+
+    with TFRecordExporter(tfrecord_dir, len(images), resolution_log2=resolution_log2) as tfr:
+        order = tfr.choose_shuffled_order() if shuffle else np.arange(len(images))
+        tfr.create_tfr_writer(img.shape)
+        for idx in range(order.size):
+            with tf.gfile.FastGFile(images[order[idx]], 'rb') as fid:
+                try:
+                    tfr.add_image_raw(fid.read())
+                except:
+                    print ('error when adding', images[order[idx]])
+                    continue
+
+        if not ignore_labels:
+            tfr.add_labels(onehot[order])
+            
+#----------------------------------------------------------------------------
+
 def create_from_images_with_labels(tfrecord_dir, image_dir, labels, shuffle):
     print('Loading images from "%s"' % image_dir)
     if(not os.path.isfile(labels)):
@@ -1127,6 +1179,14 @@ def execute_cmdline(argv):
     p.add_argument(     'image_dir',        help='Directory containing the images')
     p.add_argument(     '--shuffle',        help='Randomize image order (default: 1)', type=int, default=1)
     p.add_argument(     '--ignore_labels',  help='Ignore labels (default: 0)', type=int, default=0)
+
+    p = add_command(    'create_from_image_folders_raw', 'Create dataset from a directory full of images in raw format. Use the folders to generate labels.',
+                                            'create_from_images datasets/mydataset myimagedir')
+    p.add_argument(     'tfrecord_dir',     help='New dataset directory to be created')
+    p.add_argument(     'image_dir',        help='Directory containing the images')
+    p.add_argument(     '--shuffle',        help='Randomize image order (default: 1)', type=int, default=1)
+    p.add_argument(     '--ignore_labels',  help='Ignore labels (default: 0)', type=int, default=0)
+    p.add_argument(      "--resolution_log2", help="image width and height should be multiple of 2**res_log2 (default: 7)", type=int, default=7)
 
     p = add_command(    'create_from_images_with_labels', 'Create dataset from a directory full of images and class labels.',
                                             'create_from_images datasets/mydataset myimagedir')
