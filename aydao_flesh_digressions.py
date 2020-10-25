@@ -105,8 +105,8 @@ def main(pkl,psi,radius_large,radius_small,step1,step2,video_length=1.0):
     timestamp = datetime.now().strftime("%d-%m-%Y-%I-%M-%S-%p")
     mp4_file = './circular-'+timestamp+'.mp4'
     mp4_codec = 'libx264'
-    mp4_bitrate = '10M'
-    mp4_fps = 30 # 20
+    mp4_bitrate = '15M'
+    mp4_fps = 24 # 20
 
     frames.write_videofile(mp4_file, fps=mp4_fps, codec=mp4_codec, bitrate=mp4_bitrate)
 
