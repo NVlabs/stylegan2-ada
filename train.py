@@ -104,6 +104,7 @@ def setup_training_options(
 
     with tf.Graph().as_default(), tflib.create_session().as_default(): # pylint: disable=not-context-manager
         args.train_dataset_args = dnnlib.EasyDict(path=data, max_label_size='full')
+        args.train_dataset_args.use_raw = use_raw
         dataset_obj = dataset.load_dataset(**args.train_dataset_args) # try to load the data and see what comes out
         args.train_dataset_args.resolution = dataset_obj.shape[-1] # be explicit about resolution
         args.train_dataset_args.max_label_size = dataset_obj.label_size # be explicit about label size
