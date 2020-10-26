@@ -88,6 +88,12 @@ docker run --gpus all -it --rm -v `pwd`:/scratch --user $(id -u):$(id -g) styleg
     --outdir=out --network=https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/metfaces.pkl)"
 ```
 
+**Note**: The above defaults to a container base image that requires NVIDIA driver release `r455.23` or later.  To build an image for older drivers and GPUs, run:
+
+```.bash
+docker build --build-arg BASE_IMAGE=tensorflow/tensorflow:1.14.0-gpu-py3 --tag stylegan2ada:latest .
+```
+
 ## Projecting images to latent space
 
 To find the matching latent vector for a given image file, run:
