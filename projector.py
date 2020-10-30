@@ -214,7 +214,7 @@ class Projector:
 
 #----------------------------------------------------------------------------
 
-def project(network_pkl: str, target_fname: str, outdir: str, save_video: bool, seed: int):
+def project(network_pkl: str, target_fname: str, outdir: str, save_video: bool, seed: int, steps: int):
     # Load networks.
     tflib.init_tf({'rnd.np_random_seed': seed})
     print('Loading networks from "%s"...' % network_pkl)
@@ -232,7 +232,7 @@ def project(network_pkl: str, target_fname: str, outdir: str, save_video: bool, 
     target_float = target_uint8.astype(np.float32).transpose([2, 0, 1]) * (2 / 255) - 1
 
     # Initialize projector.
-    proj = Projector()
+    proj = Projector(num_steps=steps)
     proj.set_network(Gs)
     proj.start([target_float])
 
@@ -291,6 +291,7 @@ def main():
     parser.add_argument('--save-video',  help='Save an mp4 video of optimization progress (default: true)', type=_str_to_bool, default=True)
     parser.add_argument('--seed',        help='Random seed', type=int, default=303)
     parser.add_argument('--outdir',      help='Where to save the output images', required=True, metavar='DIR')
+    parser.add_argument('--steps',       help='Number of optimization steps', type=int, default=1000)
     project(**vars(parser.parse_args()))
 
 #----------------------------------------------------------------------------
