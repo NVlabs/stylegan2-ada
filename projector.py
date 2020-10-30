@@ -76,9 +76,9 @@ class Projector:
         self._info(f'Computing W midpoint and stddev using {self.dlatent_avg_samples} samples...')
         latent_samples = np.random.RandomState(123).randn(self.dlatent_avg_samples, *self._Gs.input_shapes[0][1:])
         if self.tiled:
-            dlatent_samples = self._Gs.components.mapping.run(latent_samples, None)[:, :1, :].astype(np.float32  # [N, 1, C]
+            dlatent_samples = self._Gs.components.mapping.run(latent_samples, None)[:, :1, :].astype(np.float32)  # [N, 1, C]
         else:
-            dlatent_samples = self._Gs.components.mapping.run(latent_samples, None).astype(np.float32 # [N, 18, C]
+            dlatent_samples = self._Gs.components.mapping.run(latent_samples, None).astype(np.float32) # [N, 18, C]
         self._dlatent_avg = np.mean(dlatent_samples, axis=0, keepdims=True)      # [1, 1, C]
         self._dlatent_std = (np.sum((dlatent_samples - self._dlatent_avg) ** 2) / self.dlatent_avg_samples) ** 0.5
         self._info(f'std = {self._dlatent_std:g}')
