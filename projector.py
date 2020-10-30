@@ -76,10 +76,9 @@ class Projector:
         self._info(f'Computing W midpoint and stddev using {self.dlatent_avg_samples} samples...')
         latent_samples = np.random.RandomState(123).randn(self.dlatent_avg_samples, *self._Gs.input_shapes[0][1:])
         if self.tiled:
-            dlatent_samples = self._Gs.components.mapping.run(latent_samples, None)[:, :1, :]  # [N, L, C]
+            dlatent_samples = self._Gs.components.mapping.run(latent_samples, None)[:, :1, :].astype(np.float32  # [N, 1, C]
         else:
-            dlatent_samples = self._Gs.components.mapping.run(latent_samples, None) # [N, 18, C]
-        dlatent_samples = dlatent_samples.astype(np.float32)           # [N, 1, C]
+            dlatent_samples = self._Gs.components.mapping.run(latent_samples, None).astype(np.float32 # [N, 18, C]
         self._dlatent_avg = np.mean(dlatent_samples, axis=0, keepdims=True)      # [1, 1, C]
         self._dlatent_std = (np.sum((dlatent_samples - self._dlatent_avg) ** 2) / self.dlatent_avg_samples) ** 0.5
         self._info(f'std = {self._dlatent_std:g}')
@@ -108,7 +107,10 @@ class Projector:
         self._dlatents_var = tf.Variable(tf.zeros([self._minibatch_size] + list(self._dlatent_avg.shape[1:])), name='dlatents_var')
         self._dlatent_noise_in = tf.placeholder(tf.float32, [], name='noise_in')
         dlatents_noise = tf.random.normal(shape=self._dlatents_var.shape) * self._dlatent_noise_in
-        self._dlatents_expr = tf.tile(self._dlatents_var + dlatents_noise, [1, self._Gs.components.synthesis.input_shape[1], 1])
+        if self.tiled:
+            self._dlatents_expr = tf.tile(self._dlatents_var + dlatents_noise, [1, self._Gs.components.synthesis.input_shape[1], 1])
+        else:
+            self._dlatents_expr = self._dlatents_var + dlatents_noise
         self._images_float_expr = tf.cast(self._Gs.components.synthesis.get_output_for(self._dlatents_expr), tf.float32)
         self._images_uint8_expr = tflib.convert_images_to_uint8(self._images_float_expr, nchw_to_nhwc=True)
 
