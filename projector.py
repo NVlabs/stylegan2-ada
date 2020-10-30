@@ -23,11 +23,11 @@ import dnnlib.tflib as tflib
 
 class Projector:
     def __init__(self,
-        num_steps                       = 1000,
+        num_steps                       = 3000,
         initial_learning_rate           = 0.1,
         initial_noise_factor            = 0.05,
         verbose                         = True,
-        tiled                           = True
+        tiled                           = False
     ):
         self.num_steps                  = num_steps
         self.dlatent_avg_samples        = 10000
