@@ -22,16 +22,23 @@ import dnnlib
 import dnnlib.tflib as tflib
 
 class Projector:
-    def __init__(self):
-        self.num_steps                  = 1000
+    def __init__(self,
+        num_steps                       = 1000,
+        initial_learning_rate           = 0.1,
+        initial_noise_factor            = 0.05,
+        verbose                         = True,
+        tiled                           = True
+    ):
+        self.num_steps                  = num_steps
         self.dlatent_avg_samples        = 10000
-        self.initial_learning_rate      = 0.1
-        self.initial_noise_factor       = 0.05
+        self.initial_learning_rate      = initial_learning_rate
+        self.initial_noise_factor       = initial_noise_factor
         self.lr_rampdown_length         = 0.25
         self.lr_rampup_length           = 0.05
         self.noise_ramp_length          = 0.75
         self.regularize_noise_weight    = 1e5
-        self.verbose                    = True
+        self.verbose                    = verbose
+        self.tiled                      = tiled
 
         self._Gs                    = None
         self._minibatch_size        = None
@@ -68,8 +75,11 @@ class Projector:
         # Compute dlatent stats.
         self._info(f'Computing W midpoint and stddev using {self.dlatent_avg_samples} samples...')
         latent_samples = np.random.RandomState(123).randn(self.dlatent_avg_samples, *self._Gs.input_shapes[0][1:])
-        dlatent_samples = self._Gs.components.mapping.run(latent_samples, None)  # [N, L, C]
-        dlatent_samples = dlatent_samples[:, :1, :].astype(np.float32)           # [N, 1, C]
+        if self.tiled:
+            dlatent_samples = self._Gs.components.mapping.run(latent_samples, None)[:, :1, :]  # [N, L, C]
+        else:
+            dlatent_samples = self._Gs.components.mapping.run(latent_samples, None) # [N, 18, C]
+        dlatent_samples = dlatent_samples.astype(np.float32)           # [N, 1, C]
         self._dlatent_avg = np.mean(dlatent_samples, axis=0, keepdims=True)      # [1, 1, C]
         self._dlatent_std = (np.sum((dlatent_samples - self._dlatent_avg) ** 2) / self.dlatent_avg_samples) ** 0.5
         self._info(f'std = {self._dlatent_std:g}')
