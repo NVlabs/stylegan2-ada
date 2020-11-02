@@ -123,11 +123,14 @@ class Projector:
 
         # Build loss graph.
         self._info('Building loss graph...')
+        # 3 _target_images_var como argumentos mandados desde start
         self._target_images_var = tf.Variable(tf.zeros(proc_images_expr.shape), name='target_images_var')
         if self._lpips is None:
             with dnnlib.util.open_url('https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/metrics/vgg16_zhang_perceptual.pkl') as f:
                 self._lpips = pickle.load(f)
         self._dist = self._lpips.get_output_for(proc_images_expr, self._target_images_var)
+        # for target_image in all_target_images:
+        #   self._dist = self._lpips.get_output_for(target_image, self._target_images_var)
         self._loss = tf.reduce_sum(self._dist)
 
         # Build noise regularization graph.
@@ -152,6 +155,7 @@ class Projector:
         self._opt_step = self._opt.apply_updates()
 
     def start(self, target_images):
+        print(target_images)
         assert self._Gs is not None
 
         # Prepare target images.
@@ -214,7 +218,7 @@ class Projector:
 
 #----------------------------------------------------------------------------
 
-def project(network_pkl: str, target_fname: str, outdir: str, save_video: bool, seed: int, steps: int):
+def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool, seed: int, steps: int):
     # Load networks.
     tflib.init_tf({'rnd.np_random_seed': seed})
     print('Loading networks from "%s"...' % network_pkl)
@@ -222,19 +226,24 @@ def project(network_pkl: str, target_fname: str, outdir: str, save_video: bool, 
         _G, _D, Gs = pickle.load(fp)
 
     # Load target image.
-    target_pil = PIL.Image.open(target_fname)
-    w, h = target_pil.size
-    s = min(w, h)
-    target_pil = target_pil.crop(((w - s) // 2, (h - s) // 2, (w + s) // 2, (h + s) // 2))
-    target_pil= target_pil.convert('RGB')
-    target_pil = target_pil.resize((Gs.output_shape[3], Gs.output_shape[2]), PIL.Image.ANTIALIAS)
-    target_uint8 = np.array(target_pil, dtype=np.uint8)
-    target_float = target_uint8.astype(np.float32).transpose([2, 0, 1]) * (2 / 255) - 1
+    # I have to run this operation at every image
+    targets = []
+    for target_fname in os.listdir(target_folder):
+        target_pil = PIL.Image.open(target_folder + target_fname)
+        w, h = target_pil.size
+        s = min(w, h)
+        target_pil = target_pil.crop(((w - s) // 2, (h - s) // 2, (w + s) // 2, (h + s) // 2))
+        target_pil= target_pil.convert('RGB')
+        target_pil = target_pil.resize((Gs.output_shape[3], Gs.output_shape[2]), PIL.Image.ANTIALIAS)
+        target_uint8 = np.array(target_pil, dtype=np.uint8)
+        target_float = target_uint8.astype(np.float32).transpose([2, 0, 1]) * (2 / 255) - 1
+        targets.append(target_float)
 
     # Initialize projector.
     proj = Projector(num_steps=steps)
     proj.set_network(Gs)
-    proj.start([target_float])
+    # Add every processed image as an argument
+    proj.start([target in targets])
 
     # Setup output directory.
     os.makedirs(outdir, exist_ok=True)
@@ -287,7 +296,9 @@ def main():
     )
 
     parser.add_argument('--network',     help='Network pickle filename', dest='network_pkl', required=True)
-    parser.add_argument('--target',      help='Target image file to project to', dest='target_fname', required=True)
+    # parser.add_argument('--target',      help='Target image file to project to', dest='target_fname', required=True)
+    # 
+    parser.add_argument('--target-folder',      help='Target the folder containing the images to project from', dest='target_folder', required=True)
     parser.add_argument('--save-video',  help='Save an mp4 video of optimization progress (default: true)', type=_str_to_bool, default=True)
     parser.add_argument('--seed',        help='Random seed', type=int, default=303)
     parser.add_argument('--outdir',      help='Where to save the output images', required=True, metavar='DIR')
