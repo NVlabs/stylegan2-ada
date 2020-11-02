@@ -243,7 +243,7 @@ def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool,
     proj = Projector(num_steps=steps)
     # proj.set_network(Gs)
     # Add every processed image as an argument
-    proj.start([for target in targets])
+    proj.start([target for target in targets])
 
     # Setup output directory.
     os.makedirs(outdir, exist_ok=True)
