@@ -222,8 +222,8 @@ def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool,
     # Load networks.
     tflib.init_tf({'rnd.np_random_seed': seed})
     print('Loading networks from "%s"...' % network_pkl)
-    with dnnlib.util.open_url(network_pkl) as fp:
-        _G, _D, Gs = pickle.load(fp)
+    # with dnnlib.util.open_url(network_pkl) as fp:
+    #     _G, _D, Gs = pickle.load(fp)
 
     # Load target image.
     # I have to run this operation at every image
@@ -241,9 +241,9 @@ def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool,
 
     # Initialize projector.
     proj = Projector(num_steps=steps)
-    proj.set_network(Gs)
+    # proj.set_network(Gs)
     # Add every processed image as an argument
-    proj.start([target in targets])
+    proj.start([for target in targets])
 
     # Setup output directory.
     os.makedirs(outdir, exist_ok=True)
