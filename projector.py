@@ -180,7 +180,7 @@ class Projector:
         # Initialize optimization state.
         self._info('Initializing optimization state...')
         dlatents = np.tile(self._dlatent_avg, [self._minibatch_size, 1, 1])
-        basic_keys = {self._target_images_var: target_images, self._dlatents_var: dlatents}
+        basic_keys = {self._dlatents_var: dlatents}
         dinamic_keys = {getattr(self, _target_image_key): target_image for (_target_image_key, target_image) in zip(self.target_images_keys, target_images)}
         tflib.set_vars({**basic_keys, **dinamic_keys})
         # for (_target_image_key, target_image) in zip(self.target_images_keys, target_images)
