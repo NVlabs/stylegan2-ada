@@ -23,6 +23,7 @@ import dnnlib.tflib as tflib
 
 class Projector:
     def __init__(self,
+        num_targets
         num_steps                       = 3000,
         initial_learning_rate           = 0.1,
         initial_noise_factor            = 0.05,
@@ -30,6 +31,7 @@ class Projector:
         tiled                           = False
     ):
         self.num_steps                  = num_steps
+        self.num_targets                = num_targets
         self.dlatent_avg_samples        = 10000
         self.initial_learning_rate      = initial_learning_rate
         self.initial_noise_factor       = initial_noise_factor
@@ -125,10 +127,16 @@ class Projector:
         self._info('Building loss graph...')
         # 3 _target_images_var como argumentos mandados desde start
         self._target_images_var = tf.Variable(tf.zeros(proc_images_expr.shape), name='target_images_var')
+        target_images_keys = [f"_target_image_{i}" for i in range(self.num_targets)]
+        for target_images_key in target_images_keys:
+            target_image_key = f"_target_image_{i}" 
+            setattr(self, target_image_key, tf.Variable(tf.zeros(proc_images_expr.shape), target_image_key)
         if self._lpips is None:
             with dnnlib.util.open_url('https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/metrics/vgg16_zhang_perceptual.pkl') as f:
                 self._lpips = pickle.load(f)
+        
         self._dist = self._lpips.get_output_for(proc_images_expr, self._target_images_var)
+        print(self._dist.shape)
         # for target_image in all_target_images:
         #   self._dist = self._lpips.get_output_for(target_image, self._target_images_var)
         self._loss = tf.reduce_sum(self._dist)
@@ -160,13 +168,15 @@ class Projector:
 
         # Prepare target images.
         self._info('Preparing target images...')
-        target_images = np.asarray(target_images, dtype='float32')
-        target_images = (target_images + 1) * (255 / 2)
-        sh = target_images.shape
-        assert sh[0] == self._minibatch_size
-        if sh[2] > self._target_images_var.shape[2]:
-            factor = sh[2] // self._target_images_var.shape[2]
-            target_images = np.reshape(target_images, [-1, sh[1], sh[2] // factor, factor, sh[3] // factor, factor]).mean((3, 5))
+        target_images = []
+        for target_image in target_images:
+            target_image = np.asarray(target_image, dtype='float32')
+            target_image = (target_image + 1) * (255 / 2)
+            sh = target_image.shape
+            assert sh[0] == self._minibatch_size
+            if sh[2] > self._target_images_var.shape[2]:
+                factor = sh[2] // self._target_images_var.shape[2]
+                target_image = np.reshape(target_image, [-1, sh[1], sh[2] // factor, factor, sh[3] // factor, factor]).mean((3, 5))
 
         # Initialize optimization state.
         self._info('Initializing optimization state...')
@@ -219,6 +229,8 @@ class Projector:
 #----------------------------------------------------------------------------
 
 def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool, seed: int, steps: int):
+    target_fnames = os.listdir(target_folder)
+    num_targets = target_fnames.length
     # Load networks.
     tflib.init_tf({'rnd.np_random_seed': seed})
     print('Loading networks from "%s"...' % network_pkl)
@@ -228,7 +240,7 @@ def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool,
     # Load target image.
     # I have to run this operation at every image
     targets = []
-    for target_fname in os.listdir(target_folder):
+    for target_fname in target_fnames:
         target_pil = PIL.Image.open(target_folder + target_fname)
         w, h = target_pil.size
         s = min(w, h)
@@ -240,8 +252,8 @@ def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool,
         targets.append(target_float)
 
     # Initialize projector.
-    proj = Projector(num_steps=steps)
-    # proj.set_network(Gs)
+    proj = Projector(num_steps=steps, num_targets=num_targets)
+    proj.set_network(Gs)
     # Add every processed image as an argument
     proj.start([target for target in targets])
 
