@@ -126,7 +126,7 @@ class Projector:
         # Build loss graph.
         self._info('Building loss graph...')
         # 3 _target_images_var como argumentos mandados desde start
-        self._target_images_var = tf.Variable(tf.zeros(proc_images_expr.shape), name='target_images_var')
+        # self._target_images_var = tf.Variable(tf.zeros(proc_images_expr.shape), name='target_images_var')
         self.target_images_keys = [f"_target_image_{i}" for i in range(self.num_targets)]
         for _target_image_key in self.target_images_keys:
             setattr(self, _target_image_key, tf.Variable(tf.zeros(proc_images_expr.shape), _target_image_key))
