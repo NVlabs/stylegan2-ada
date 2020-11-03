@@ -235,6 +235,7 @@ class Projector:
 
 def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool, seed: int, steps: int):
     target_fnames = os.listdir(target_folder)
+    num_targets = len(target_fnames)
     # Load networks.
     tflib.init_tf({'rnd.np_random_seed': seed})
     print('Loading networks from "%s"...' % network_pkl)
@@ -245,7 +246,6 @@ def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool,
     # I have to run this operation at every image
     targets = []
     for target_fname in target_fnames:
-        print(target_folder + target_fname)
         target_pil = PIL.Image.open(target_folder + target_fname)
         w, h = target_pil.size
         s = min(w, h)
