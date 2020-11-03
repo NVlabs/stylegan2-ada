@@ -129,13 +129,13 @@ class Projector:
         # self._target_images_var = tf.Variable(tf.zeros(proc_images_expr.shape), name='target_images_var')
         self.target_images_keys = [f"_target_image_{i}" for i in range(self.num_targets)]
         for _target_image_key in self.target_images_keys:
+            print(_target_image_key)
             setattr(self, _target_image_key, tf.Variable(tf.zeros(proc_images_expr.shape), _target_image_key))
         if self._lpips is None:
             with dnnlib.util.open_url('https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/metrics/vgg16_zhang_perceptual.pkl') as f:
                 self._lpips = pickle.load(f)
         
         self._dist = sum([self._lpips.get_output_for(proc_images_expr, getattr(self, _target_image_key)) for _target_image_key in self.target_images_keys])
-        print(self._dist.shape)
         # for target_image in all_target_images:
         #   self._dist = self._lpips.get_output_for(target_image, self._target_images_var)
         self._loss = tf.reduce_sum(self._dist)
@@ -162,7 +162,6 @@ class Projector:
         self._opt_step = self._opt.apply_updates()
 
     def start(self, target_images):
-        print(target_images)
         assert self._Gs is not None
 
         # Prepare target images.
