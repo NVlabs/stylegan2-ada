@@ -230,7 +230,7 @@ class Projector:
 
 def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool, seed: int, steps: int):
     target_fnames = os.listdir(target_folder)
-    num_targets = target_fnames.length
+    num_targets = len(target_fnames)
     # Load networks.
     tflib.init_tf({'rnd.np_random_seed': seed})
     print('Loading networks from "%s"...' % network_pkl)
