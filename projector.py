@@ -23,7 +23,7 @@ import dnnlib.tflib as tflib
 
 class Projector:
     def __init__(self,
-        num_targets
+        num_targets,
         num_steps                       = 3000,
         initial_learning_rate           = 0.1,
         initial_noise_factor            = 0.05,
