@@ -245,6 +245,7 @@ def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool,
     # I have to run this operation at every image
     targets = []
     for target_fname in target_fnames:
+        print(target_folder + target_fname)
         target_pil = PIL.Image.open(target_folder + target_fname)
         w, h = target_pil.size
         s = min(w, h)
