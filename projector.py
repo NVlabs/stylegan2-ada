@@ -127,14 +127,14 @@ class Projector:
         self._info('Building loss graph...')
         # 3 _target_images_var como argumentos mandados desde start
         self._target_images_var = tf.Variable(tf.zeros(proc_images_expr.shape), name='target_images_var')
-        target_images_keys = [f"_target_image_{i}" for i in range(self.num_targets)]
-        for _target_image_key in target_images_keys:
+        self.target_images_keys = [f"_target_image_{i}" for i in range(self.num_targets)]
+        for _target_image_key in self.target_images_keys:
             setattr(self, _target_image_key, tf.Variable(tf.zeros(proc_images_expr.shape), _target_image_key))
         if self._lpips is None:
             with dnnlib.util.open_url('https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/metrics/vgg16_zhang_perceptual.pkl') as f:
                 self._lpips = pickle.load(f)
         
-        self._dist = sum([self._lpips.get_output_for(proc_images_expr, getattr(self, _target_image_key)) for _target_image_key in target_images_keys])
+        self._dist = sum([self._lpips.get_output_for(proc_images_expr, getattr(self, _target_image_key)) for _target_image_key in self.target_images_keys])
         print(self._dist.shape)
         # for target_image in all_target_images:
         #   self._dist = self._lpips.get_output_for(target_image, self._target_images_var)
@@ -180,7 +180,10 @@ class Projector:
         # Initialize optimization state.
         self._info('Initializing optimization state...')
         dlatents = np.tile(self._dlatent_avg, [self._minibatch_size, 1, 1])
+        
         tflib.set_vars({self._target_images_var: target_images, self._dlatents_var: dlatents})
+        # for (_target_image_key, target_image) in zip(self.target_images_keys, target_images)
+        tflib.set_vars({getattr(self, _target_image_key): target_image for (_target_image_key, target_image) in zip(self.target_images_keys, target_images)})
         tflib.run(self._noise_init_op)
         self._opt.reset_optimizer_state()
         self._cur_step = 0
