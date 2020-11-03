@@ -233,7 +233,7 @@ class Projector:
 
 #----------------------------------------------------------------------------
 
-def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool, seed: int, steps: int):
+def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool, seed: int, steps: int, tiled: bool):
     target_fnames = os.listdir(target_folder)
     num_targets = len(target_fnames)
     # Load networks.
@@ -257,7 +257,7 @@ def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool,
         targets.append([target_float])
 
     # Initialize projector.
-    proj = Projector(num_steps=steps, num_targets=num_targets)
+    proj = Projector(num_steps=steps, num_targets=num_targets, tiled=tiled)
     proj.set_network(Gs)
     # Add every processed image as an argument
     proj.start(targets)
