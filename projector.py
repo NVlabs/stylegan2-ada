@@ -110,7 +110,6 @@ class Projector:
         self._info('Building image output graph...')
         self._minibatch_size = 1
         self._dlatents_var = tf.Variable(tf.zeros([self._minibatch_size] + list(self._dlatent_avg.shape[1:])), name='dlatents_var')
-        print(self._dlatents_var)
         self._dlatent_noise_in = tf.placeholder(tf.float32, [], name='noise_in')
         dlatents_noise = tf.random.normal(shape=self._dlatents_var.shape) * self._dlatent_noise_in
         if self.tiled:
@@ -236,7 +235,6 @@ class Projector:
 
 def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool, seed: int, steps: int):
     target_fnames = os.listdir(target_folder)
-    num_targets = len(target_fnames)
     # Load networks.
     tflib.init_tf({'rnd.np_random_seed': seed})
     print('Loading networks from "%s"...' % network_pkl)
@@ -256,8 +254,6 @@ def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool,
         target_uint8 = np.array(target_pil, dtype=np.uint8)
         target_float = target_uint8.astype(np.float32).transpose([2, 0, 1]) * (2 / 255) - 1
         targets.append([target_float])
-    print(len(targets))
-    print(targets)
 
     # Initialize projector.
     proj = Projector(num_steps=steps, num_targets=num_targets)
@@ -322,7 +318,7 @@ def main():
     parser.add_argument('--save-video',  help='Save an mp4 video of optimization progress (default: true)', type=_str_to_bool, default=True)
     parser.add_argument('--seed',        help='Random seed', type=int, default=303)
     parser.add_argument('--outdir',      help='Where to save the output images', required=True, metavar='DIR')
-    parser.add_argument('--steps',       help='Number of optimization steps', type=int, default=1000)
+    parser.add_argument('--steps',       help='Number of optimization steps', type=int, default=500)
     project(**vars(parser.parse_args()))
 
 #----------------------------------------------------------------------------
