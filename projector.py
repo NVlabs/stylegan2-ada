@@ -320,6 +320,7 @@ def main():
     parser.add_argument('--seed',        help='Random seed', type=int, default=303)
     parser.add_argument('--outdir',      help='Where to save the output images', required=True, metavar='DIR')
     parser.add_argument('--steps',       help='Number of optimization steps', type=int, default=500)
+    parser.add_argument('--tiled',       help='Tiled?', type=bool, default=True)
     project(**vars(parser.parse_args()))
 
 #----------------------------------------------------------------------------
