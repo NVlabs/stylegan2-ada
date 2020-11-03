@@ -21,6 +21,9 @@ import tqdm
 import dnnlib
 import dnnlib.tflib as tflib
 
+import random
+import string
+
 class Projector:
     def __init__(self,
         num_targets,
@@ -128,7 +131,8 @@ class Projector:
         self._info('Building loss graph...')
         # 3 _target_images_var como argumentos mandados desde start
         # self._target_images_var = tf.Variable(tf.zeros(proc_images_expr.shape), name='target_images_var')
-        self.target_images_keys = [f"_target_image_{i}" for i in range(self.num_targets)]
+        all_letters = string.ascii_lowercase
+        self.target_images_keys = [''.join(random.choice(all_letters) for j in range(10)) for i in range(self.num_targets)]
         for _target_image_key in self.target_images_keys:
             print(_target_image_key)
             setattr(self, _target_image_key, tf.Variable(tf.zeros(proc_images_expr.shape), name=_target_image_key))
