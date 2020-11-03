@@ -259,14 +259,14 @@ def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool,
         target_pil = target_pil.resize((Gs.output_shape[3], Gs.output_shape[2]), PIL.Image.ANTIALIAS)
         target_uint8 = np.array(target_pil, dtype=np.uint8)
         target_float = target_uint8.astype(np.float32).transpose([2, 0, 1]) * (2 / 255) - 1
-        targets.append(target_float)
+        targets.append([target_float])
     print(len(targets))
 
     # Initialize projector.
     proj = Projector(num_steps=steps, num_targets=num_targets)
     proj.set_network(Gs)
     # Add every processed image as an argument
-    proj.start([[target] for target in targets])
+    proj.start(targets)
 
     # Setup output directory.
     os.makedirs(outdir, exist_ok=True)
