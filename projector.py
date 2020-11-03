@@ -107,6 +107,7 @@ class Projector:
         self._info('Building image output graph...')
         self._minibatch_size = 1
         self._dlatents_var = tf.Variable(tf.zeros([self._minibatch_size] + list(self._dlatent_avg.shape[1:])), name='dlatents_var')
+        print(self._dlatents_var)
         self._dlatent_noise_in = tf.placeholder(tf.float32, [], name='noise_in')
         dlatents_noise = tf.random.normal(shape=self._dlatents_var.shape) * self._dlatent_noise_in
         if self.tiled:
