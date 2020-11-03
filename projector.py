@@ -131,7 +131,7 @@ class Projector:
         self.target_images_keys = [f"_target_image_{i}" for i in range(self.num_targets)]
         for _target_image_key in self.target_images_keys:
             print(_target_image_key)
-            setattr(self, _target_image_key, tf.Variable(tf.zeros(proc_images_expr.shape), _target_image_key))
+            setattr(self, _target_image_key, tf.Variable(tf.zeros(proc_images_expr.shape), name=_target_image_key))
         print(getattr(self, _target_image_key))
         if self._lpips is None:
             with dnnlib.util.open_url('https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/metrics/vgg16_zhang_perceptual.pkl') as f:
