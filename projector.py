@@ -24,7 +24,7 @@ import dnnlib.tflib as tflib
 class Projector:
     def __init__(self,
         num_targets,
-        num_steps                       = 3000,
+        num_steps                       = 500,
         initial_learning_rate           = 0.1,
         initial_noise_factor            = 0.05,
         verbose                         = True,
@@ -181,7 +181,7 @@ class Projector:
         self._info('Initializing optimization state...')
         dlatents = np.tile(self._dlatent_avg, [self._minibatch_size, 1, 1])
         
-        tflib.set_vars({self._target_images_var: target_images, self._dlatents_var: dlatents})
+        tflib.set_vars({self._dlatents_var: dlatents})
         # for (_target_image_key, target_image) in zip(self.target_images_keys, target_images)
         tflib.set_vars({getattr(self, _target_image_key): target_image for (_target_image_key, target_image) in zip(self.target_images_keys, target_images)})
         tflib.run(self._noise_init_op)
