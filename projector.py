@@ -133,6 +133,7 @@ class Projector:
         # self._target_images_var = tf.Variable(tf.zeros(proc_images_expr.shape), name='target_images_var')
         all_letters = string.ascii_lowercase
         self.target_images_keys = [''.join(random.choice(all_letters) for j in range(10)) for i in range(self.num_targets)]
+        print(self.target_images_keys)
         for _target_image_key in self.target_images_keys:
             print(_target_image_key)
             setattr(self, _target_image_key, tf.Variable(tf.zeros(proc_images_expr.shape), name=_target_image_key))
@@ -258,6 +259,7 @@ def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool,
         target_uint8 = np.array(target_pil, dtype=np.uint8)
         target_float = target_uint8.astype(np.float32).transpose([2, 0, 1]) * (2 / 255) - 1
         targets.append(target_float)
+    print(len(targets))
 
     # Initialize projector.
     proj = Projector(num_steps=steps, num_targets=num_targets)
