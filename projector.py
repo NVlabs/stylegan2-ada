@@ -131,6 +131,7 @@ class Projector:
         for _target_image_key in self.target_images_keys:
             print(_target_image_key)
             setattr(self, _target_image_key, tf.Variable(tf.zeros(proc_images_expr.shape), _target_image_key))
+        print(getattr(self, _target_image_key))
         if self._lpips is None:
             with dnnlib.util.open_url('https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/metrics/vgg16_zhang_perceptual.pkl') as f:
                 self._lpips = pickle.load(f)
@@ -181,6 +182,7 @@ class Projector:
         dlatents = np.tile(self._dlatent_avg, [self._minibatch_size, 1, 1])
         basic_keys = {self._dlatents_var: dlatents}
         dinamic_keys = {getattr(self, _target_image_key): target_image for (_target_image_key, target_image) in zip(self.target_images_keys, target_images)}
+        print(dinamic_keys)
         tflib.set_vars({**basic_keys, **dinamic_keys})
         # for (_target_image_key, target_image) in zip(self.target_images_keys, target_images)
         tflib.run(self._noise_init_op)
