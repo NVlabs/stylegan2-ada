@@ -179,8 +179,8 @@ class Projector:
             target_image = (target_image + 1) * (255 / 2)
             sh = target_image.shape
             assert sh[0] == self._minibatch_size
-            if sh[2] > self._target_images_var.shape[2]:
-                factor = sh[2] // self._target_images_var.shape[2]
+            if sh[2] > getattr(self, self.target_images_keys[0]).shape[2]:
+                factor = sh[2] // getattr(self, self.target_images_keys[0]).shape[2]
                 target_image = np.reshape(target_image, [-1, sh[1], sh[2] // factor, factor, sh[3] // factor, factor]).mean((3, 5))
                 processed_target_images.append(target_image)
 
