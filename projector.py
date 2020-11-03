@@ -174,8 +174,8 @@ class Projector:
         # Prepare target images.
         self._info('Preparing target images...')
         processed_target_images = []
-        for target_image in target_images:
-            target_image = np.asarray(target_image, dtype='float32')
+        for _target_image in target_images:
+            target_image = np.asarray(_target_image, dtype='float32')
             target_image = (target_image + 1) * (255 / 2)
             sh = target_image.shape
             assert sh[0] == self._minibatch_size
@@ -261,6 +261,7 @@ def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool,
         target_float = target_uint8.astype(np.float32).transpose([2, 0, 1]) * (2 / 255) - 1
         targets.append([target_float])
     print(len(targets))
+    print(targets)
 
     # Initialize projector.
     proj = Projector(num_steps=steps, num_targets=num_targets)
