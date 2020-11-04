@@ -31,8 +31,7 @@ class Projector:
         initial_learning_rate           = 0.1,
         initial_noise_factor            = 0.05,
         verbose                         = True,
-        tiled                           = False,
-        random_seed                     = 123
+        tiled                           = False
     ):
         self.num_steps                  = num_steps
         self.num_targets                = num_targets
@@ -45,7 +44,6 @@ class Projector:
         self.regularize_noise_weight    = 1e5
         self.verbose                    = verbose
         self.tiled                      = tiled
-        self.random_seed                = random_seed
 
         self._Gs                    = None
         self._minibatch_size        = None
@@ -81,7 +79,7 @@ class Projector:
 
         # Compute dlatent stats.
         self._info(f'Computing W midpoint and stddev using {self.dlatent_avg_samples} samples...')
-        latent_samples = np.random.RandomState(self.random_seed).randn(self.dlatent_avg_samples, *self._Gs.input_shapes[0][1:])
+        latent_samples = np.random.RandomState(123).randn(self.dlatent_avg_samples, *self._Gs.input_shapes[0][1:])
         if self.tiled:
             dlatent_samples = self._Gs.components.mapping.run(latent_samples, None)[:, :1, :].astype(np.float32)  # [N, 1, C]
         else:
@@ -235,7 +233,15 @@ class Projector:
 
 #----------------------------------------------------------------------------
 
-def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool, seed: int, steps: int, tiled: bool):
+def project(
+        network_pkl: str,
+        target_folder: str,
+        outdir: str,
+        save_video: bool,
+        seed: int,
+        steps: int,
+        tiled: bool,
+    ):
     target_fnames = os.listdir(target_folder)
     num_targets = len(target_fnames)
     # Load networks.
@@ -259,7 +265,7 @@ def project(network_pkl: str, target_folder: str, outdir: str, save_video: bool,
         targets.append([target_float])
 
     # Initialize projector.
-    proj = Projector(num_steps=steps, num_targets=num_targets, tiled=tiled)
+    proj = Projector(num_steps=steps, num_targets=num_targets, tiled=tiled, random_seed=seed)
     proj.set_network(Gs)
     # Add every processed image as an argument
     proj.start(targets)
