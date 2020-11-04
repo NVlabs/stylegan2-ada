@@ -265,7 +265,7 @@ def project(
         targets.append([target_float])
 
     # Initialize projector.
-    proj = Projector(num_steps=steps, num_targets=num_targets, tiled=tiled, random_seed=seed)
+    proj = Projector(num_steps=steps, num_targets=num_targets, tiled=tiled)
     proj.set_network(Gs)
     # Add every processed image as an argument
     proj.start(targets)
