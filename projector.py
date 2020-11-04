@@ -31,7 +31,8 @@ class Projector:
         initial_learning_rate           = 0.1,
         initial_noise_factor            = 0.05,
         verbose                         = True,
-        tiled                           = False
+        tiled                           = False,
+        latent_seed                     = 123
     ):
         self.num_steps                  = num_steps
         self.num_targets                = num_targets
@@ -44,6 +45,7 @@ class Projector:
         self.regularize_noise_weight    = 1e5
         self.verbose                    = verbose
         self.tiled                      = tiled
+        self.latent_seed                = latent_seed
 
         self._Gs                    = None
         self._minibatch_size        = None
@@ -79,7 +81,7 @@ class Projector:
 
         # Compute dlatent stats.
         self._info(f'Computing W midpoint and stddev using {self.dlatent_avg_samples} samples...')
-        latent_samples = np.random.RandomState(123).randn(self.dlatent_avg_samples, *self._Gs.input_shapes[0][1:])
+        latent_samples = np.random.RandomState(self.latent_seed).randn(self.dlatent_avg_samples, *self._Gs.input_shapes[0][1:])
         if self.tiled:
             dlatent_samples = self._Gs.components.mapping.run(latent_samples, None)[:, :1, :].astype(np.float32)  # [N, 1, C]
         else:
@@ -241,11 +243,11 @@ def project(
         seed: int,
         steps: int,
         tiled: bool,
-    ):
+        latent_seed: int):
     target_fnames = os.listdir(target_folder)
     num_targets = len(target_fnames)
     # Load networks.
-    tflib.init_tf({'rnd.np_random_seed': seed})
+    tflib.init_tf({'rnd.np_latent_seed': seed})
     print('Loading networks from "%s"...' % network_pkl)
     with dnnlib.util.open_url(network_pkl) as fp:
         _G, _D, Gs = pickle.load(fp)
@@ -265,7 +267,7 @@ def project(
         targets.append([target_float])
 
     # Initialize projector.
-    proj = Projector(num_steps=steps, num_targets=num_targets, tiled=tiled)
+    proj = Projector(num_steps=steps, num_targets=num_targets, tiled=tiled, latent_seed=latent_seed)
     proj.set_network(Gs)
     # Add every processed image as an argument
     proj.start(targets)
@@ -329,6 +331,7 @@ def main():
     parser.add_argument('--outdir',      help='Where to save the output images', required=True, metavar='DIR')
     parser.add_argument('--steps',       help='Number of optimization steps', type=int, default=500)
     parser.add_argument('--tiled',       help='Tiled?', type=bool, default=True)
+    parser.add_argument('--latent_seed',        help='Latent seed', type=int, default=123)
     project(**vars(parser.parse_args()))
 
 #----------------------------------------------------------------------------
