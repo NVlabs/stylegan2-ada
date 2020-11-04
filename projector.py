@@ -31,11 +31,12 @@ class Projector:
         initial_learning_rate           = 0.1,
         initial_noise_factor            = 0.05,
         verbose                         = True,
-        tiled                           = False
+        tiled                           = False,
+        random_seed                     = 123
     ):
         self.num_steps                  = num_steps
         self.num_targets                = num_targets
-        self.dlatent_avg_samples        = 10000
+        self.dlatent_avg_samples        = 1
         self.initial_learning_rate      = initial_learning_rate
         self.initial_noise_factor       = initial_noise_factor
         self.lr_rampdown_length         = 0.25
@@ -44,6 +45,7 @@ class Projector:
         self.regularize_noise_weight    = 1e5
         self.verbose                    = verbose
         self.tiled                      = tiled
+        self.random_seed                = random_seed
 
         self._Gs                    = None
         self._minibatch_size        = None
@@ -79,7 +81,7 @@ class Projector:
 
         # Compute dlatent stats.
         self._info(f'Computing W midpoint and stddev using {self.dlatent_avg_samples} samples...')
-        latent_samples = np.random.RandomState(123).randn(self.dlatent_avg_samples, *self._Gs.input_shapes[0][1:])
+        latent_samples = np.random.RandomState(self.random_seed).randn(self.dlatent_avg_samples, *self._Gs.input_shapes[0][1:])
         if self.tiled:
             dlatent_samples = self._Gs.components.mapping.run(latent_samples, None)[:, :1, :].astype(np.float32)  # [N, 1, C]
         else:
