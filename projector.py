@@ -140,11 +140,11 @@ class Projector:
             with dnnlib.util.open_url('https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/metrics/vgg16_zhang_perceptual.pkl') as f:
                 self._lpips = pickle.load(f)
         
-        self._dist = tf.reduce_sum([self._lpips.get_output_for(proc_images_expr, getattr(self, _target_image_key)) for _target_image_key in self.target_images_keys])
+        self._dist = sum([self._lpips.get_output_for(proc_images_expr, getattr(self, _target_image_key)) for _target_image_key in self.target_images_keys])
         # self._dist = sum([self._lpips.get_output_for(proc_images_expr, getattr(self, _target_image_key)) for _target_image_key in self.target_images_keys])
         # for target_image in all_target_images:
         #   self._dist = self._lpips.get_output_for(target_image, self._target_images_var)
-        self._loss = self._dist
+        self._loss = tf.reduce_sum(self._dist)
 
         # Build noise regularization graph.
         self._info('Building noise regularization graph...')
