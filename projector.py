@@ -140,9 +140,7 @@ class Projector:
             with dnnlib.util.open_url('https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada/pretrained/metrics/vgg16_zhang_perceptual.pkl') as f:
                 self._lpips = pickle.load(f)
         
-        _dists = [self._lpips.get_output_for(proc_images_expr, getattr(self, _target_image_key)) for _target_image_key in self.target_images_keys]
-        _max_dist = tf.reduce_max(_dists)
-        self._dist = tf.reduce_sum(_dists) / _max_dist 
+        self._dist = tf.reduce_sum([self._lpips.get_output_for(proc_images_expr, getattr(self, _target_image_key)) for _target_image_key in self.target_images_keys])
         # self._dist = sum([self._lpips.get_output_for(proc_images_expr, getattr(self, _target_image_key)) for _target_image_key in self.target_images_keys])
         # for target_image in all_target_images:
         #   self._dist = self._lpips.get_output_for(target_image, self._target_images_var)
