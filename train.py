@@ -44,6 +44,7 @@ def setup_training_options(
 
     # Base config.
     cfg        = None, # Base config: 'auto' (default), 'stylegan2', 'paper256', 'paper512', 'paper1024', 'cifar', 'cifarbaseline'
+    cifar_tuning = None # Enforce CIFAR-specific architecture tuning: <bool>, default = False
     gamma      = None, # Override R1 gamma: <float>, default = depends on cfg
     kimg       = None, # Override training duration: <int>, default = depends on cfg
     cfg_map    = None, # Override config map: <int>, default = depends on cfg
@@ -197,7 +198,14 @@ def setup_training_options(
     args.G_args.num_fp16_res = args.D_args.num_fp16_res = 4 # enable mixed-precision training
     args.G_args.conv_clamp = args.D_args.conv_clamp = 256 # clamp activations to avoid float16 overflow
 
-    if cfg == 'cifar':
+    if cifar_tuning is None:
+        cifar_tuning = False
+    else:
+        assert isinstance(cifar_tuning, bool)
+        if cifar_tuning:
+            desc += '-tuning'
+
+    if cifar_tuning or cfg == 'cifar':
         args.loss_args.pl_weight = 0 # disable path length regularization
         args.G_args.style_mixing_prob = None # disable style mixing
         args.D_args.architecture = 'orig' # disable residual skip connections
@@ -539,6 +547,7 @@ def main():
 
     group = parser.add_argument_group('base config')
     group.add_argument('--cfg',   help='Base config (default: auto)', choices=['auto', 'auto_no_ramp', 'stylegan2', 'paper256', 'paper512', 'paper1024', 'cifar', 'cifarbaseline'])
+    group.add_argument('--cifar_tuning', help='Enforce CIFAR-specific architecture tuning (default: false)', type=_str_to_bool, metavar='BOOL')
     group.add_argument('--gamma', help='Override R1 gamma', type=float, metavar='FLOAT')
     group.add_argument('--kimg',  help='Override training duration', type=int, metavar='INT')
     group.add_argument('--cfg_map',  help='Override config map', type=int, metavar='INT')
