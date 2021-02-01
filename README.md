@@ -11,7 +11,9 @@ Abstract: *Training generative adversarial networks (GAN) using too little data 
 For business inquiries, please contact [researchinquiries@nvidia.com](mailto:researchinquiries@nvidia.com)<br>
 For press and other inquiries, please contact Hector Marinez at [hmarinez@nvidia.com](mailto:hmarinez@nvidia.com)<br>
 
-**&#9733;&#9733;&#9733; NEW: [Official PyTorch version](https://github.com/NVlabs/stylegan2-ada-pytorch) is now available; see the full list of versions [here](https://nvlabs.github.io/stylegan2/versions.html) &#9733;&#9733;&#9733;**
+## Looking for the PyTorch version?
+
+The [Official PyTorch version](https://github.com/NVlabs/stylegan2-ada-pytorch) is now available and supersedes the TensorFlow version. See the full list of versions [here](https://nvlabs.github.io/stylegan2/versions.html).
 
 ## What's new
 
